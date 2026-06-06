@@ -41,7 +41,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [priority,       setPriority]       = useState<TaskPriority>(task.priority)
   const [dueDate,        setDueDate]        = useState(task.due_date ? task.due_date.slice(0, 10) : '')
   const [selectedLabels, setSelectedLabels] = useState<string[]>(task.labels)
-  const [notesMode,      setNotesMode]      = useState<'edit' | 'preview'>('edit')
+  const [notesMode,      setNotesMode]      = useState<'edit' | 'preview'>('preview')
   const [showLabels,     setShowLabels]     = useState(false)
   const labelPickerRef = useRef<HTMLDivElement>(null)
 
