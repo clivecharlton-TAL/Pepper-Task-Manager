@@ -42,7 +42,7 @@ interface Props {
 }
 
 export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
-  const { deleteTask } = useTaskStore()
+  const { deleteTask, updateTask } = useTaskStore()
   const isDone = task.status === 'done'
   const statusColour = STATUS_COLOURS[task.status]
   const due = task.due_date ? dueDateLabel(task.due_date) : null
@@ -50,28 +50,39 @@ export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
     .map(id => flatLabels.find(l => l.id === id))
     .filter((l): l is LabelNode => !!l)
 
+  const toggleDone = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    updateTask({ id: task.id, status: isDone ? 'todo' : 'done' })
+  }
+
   return (
     <div className="group">
       <div
         className="flex items-start gap-3 py-3 px-3 -mx-3 cursor-pointer rounded-lg hover:bg-[#242424] transition-colors"
         onClick={() => onOpen(task)}
       >
-        {/* Status circle */}
-        <div className="flex-shrink-0 mt-0.5">
+        {/* Status circle — click to mark done */}
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={toggleDone}
+          className="flex-shrink-0 mt-0.5 group/circle"
+          title={isDone ? 'Mark as todo' : 'Mark as done'}
+        >
           <div
-            className="w-[18px] h-[18px] rounded-full border-[1.5px] flex items-center justify-center transition-all"
+            className="w-[18px] h-[18px] rounded-full border-[1.5px] flex items-center justify-center transition-all group-hover/circle:border-[#4caf82] group-hover/circle:bg-[#4caf82]/20"
             style={{
-              borderColor: statusColour,
-              backgroundColor: isDone ? statusColour : 'transparent',
+              borderColor: isDone ? STATUS_COLOURS.done : statusColour,
+              backgroundColor: isDone ? STATUS_COLOURS.done : 'transparent',
             }}
           >
-            {isDone && (
-              <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-                <path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="#1c1c1e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
+            {/* Checkmark — always visible when done, shown on hover when not */}
+            <svg width="9" height="9" viewBox="0 0 9 9" fill="none"
+              className={isDone ? 'opacity-100' : 'opacity-0 group-hover/circle:opacity-60'}
+            >
+              <path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke={isDone ? '#1c1c1e' : '#4caf82'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </div>
-        </div>
+        </button>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
