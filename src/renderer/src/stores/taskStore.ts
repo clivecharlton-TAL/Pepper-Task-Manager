@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { Task, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, TaskStatus, TaskPriority, DomainEvent } from '../../../shared/types'
 
+export type DueFilter = 'overdue' | 'today' | 'this_week'
+
 interface TaskStore {
   tasks: Task[]
   allTasks: Task[]
@@ -9,6 +11,7 @@ interface TaskStore {
   activeLabel: string | null
   activeStatus: TaskStatus | null
   activePriority: TaskPriority | null
+  activeDue: DueFilter | null
   searchQuery: string
   viewMode: 'kanban' | 'list'
 
@@ -23,6 +26,7 @@ interface TaskStore {
   setActiveLabel: (label: string | null) => void
   setActiveStatus: (status: TaskStatus | null) => void
   setActivePriority: (priority: TaskPriority | null) => void
+  setActiveDue: (due: DueFilter | null) => void
   setSearchQuery: (q: string) => void
   setViewMode: (mode: 'kanban' | 'list') => void
 }
@@ -72,6 +76,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   activeLabel: null,
   activeStatus: null,
   activePriority: null,
+  activeDue: null,
   searchQuery: '',
   viewMode: 'kanban',
 
@@ -131,6 +136,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   setActiveStatus: (status) => set({ activeStatus: status }),
 
   setActivePriority: (priority) => set({ activePriority: priority }),
+
+  setActiveDue: (due) => set({ activeDue: due }),
 
   setSearchQuery: (q) => set({ searchQuery: q }),
   setViewMode: (mode) => set({ viewMode: mode }),

@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react'
 import { useTaskStore } from '../../stores/taskStore'
 
 export default function TopBar() {
-  const { activeLabel, activeStatus, activePriority, searchQuery, setSearchQuery, viewMode, setViewMode } = useTaskStore()
+  const { activeLabel, activeStatus, activePriority, activeDue, searchQuery, setSearchQuery, viewMode, setViewMode } = useTaskStore()
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -25,11 +25,12 @@ export default function TopBar() {
       className="flex items-center gap-3 px-4 border-b border-[#333333] flex-shrink-0 drag-region"
       style={{ paddingTop: '14px', paddingBottom: '10px' }}
     >
-      {(activeLabel || activeStatus || activePriority) ? (
+      {(activeLabel || activeStatus || activePriority || activeDue) ? (
         <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
           {[
             activeStatus   && activeStatus.replace('_', ' '),
             activePriority && `${activePriority} priority`,
+            activeDue      && activeDue.replace('_', ' '),
             activeLabel    && activeLabel.split('/').pop(),
           ].filter(Boolean).map((crumb, i, arr) => (
             <span key={i} className="flex items-center gap-1.5">

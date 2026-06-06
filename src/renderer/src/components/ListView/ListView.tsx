@@ -1,10 +1,21 @@
 import { useState, useMemo } from 'react'
-import { useTaskStore } from '../../stores/taskStore'
+import { useTaskStore, type DueFilter } from '../../stores/taskStore'
 import type { Task, LabelNode } from '../../../../shared/types'
 import ListRow from './ListRow'
 import TaskDetailModal from '../Kanban/TaskDetailModal'
 
-
+function matchesDue(task: Task, filter: DueFilter): boolean {
+  if (!task.due_date) return false
+  const due   = task.due_date.slice(0, 10)
+  const today = new Date().toISOString().slice(0, 10)
+  const d     = new Date()
+  d.setDate(d.getDate() + (7 - d.getDay()) % 7)
+  const eow   = d.toISOString().slice(0, 10)
+  if (filter === 'overdue')   return due < today
+  if (filter === 'today')     return due === today
+  if (filter === 'this_week') return due >= today && due <= eow
+  return false
+}
 
 function flattenLabels(nodes: LabelNode[]): LabelNode[] {
   const out: LabelNode[] = []
@@ -30,7 +41,7 @@ function sortByDue(a: Task, b: Task): number {
 }
 
 export default function ListView() {
-  const { tasks, labels, searchQuery, activeStatus, activePriority } = useTaskStore()
+  const { tasks, labels, searchQuery, activeStatus, activePriority, activeDue } = useTaskStore()
   const [detailTask, setDetailTask] = useState<Task | null>(null)
   const [showDone, setShowDone] = useState(false)
 
@@ -39,20 +50,25 @@ export default function ListView() {
   const { activeTasks, doneTasks } = useMemo(() => {
     const filtered = tasks.filter(t => {
       if (activePriority && t.priority !== activePriority) return false
+      if (activeDue      && !matchesDue(t, activeDue))     return false
       if (searchQuery    && !matchesSearch(t, searchQuery, flatLabels)) return false
       return true
     })
 
     if (activeStatus) {
-      // When explicitly filtering by status, show whatever was requested
       const sorted = [...filtered.filter(t => t.status === activeStatus)].sort(sortByDue)
       return { activeTasks: sorted, doneTasks: [] }
+    }
+
+    // When a due filter is active, show done tasks inline (they're already time-scoped)
+    if (activeDue) {
+      return { activeTasks: [...filtered].sort(sortByDue), doneTasks: [] }
     }
 
     const active = filtered.filter(t => t.status !== 'done')
     const done   = filtered.filter(t => t.status === 'done')
     return { activeTasks: [...active].sort(sortByDue), doneTasks: [...done].sort(sortByDue) }
-  }, [tasks, searchQuery, activeStatus, activePriority, flatLabels])
+  }, [tasks, searchQuery, activeStatus, activePriority, activeDue, flatLabels])
 
   const rows = showDone ? [...activeTasks, ...doneTasks] : activeTasks
 

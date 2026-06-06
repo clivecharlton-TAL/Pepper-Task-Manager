@@ -1,6 +1,6 @@
-import { useTaskStore } from '../../stores/taskStore'
+import { useTaskStore, type DueFilter } from '../../stores/taskStore'
 import LabelTree from './LabelTree'
-import type { TaskStatus, TaskPriority } from '../../../../shared/types'
+import type { Task, TaskStatus, TaskPriority } from '../../../../shared/types'
 
 const STATUS_META: { id: TaskStatus; label: string; colour: string }[] = [
   { id: 'backlog',     label: 'Backlog',     colour: '#6b7280' },
@@ -14,6 +14,35 @@ const PRIORITY_META: { id: TaskPriority; label: string; colour: string }[] = [
   { id: 'medium', label: 'Medium', colour: '#FFC400' },
   { id: 'low',    label: 'Low',    colour: '#30D158' },
 ]
+
+const DUE_META: { id: DueFilter; label: string; colour: string }[] = [
+  { id: 'overdue',   label: 'Overdue',   colour: '#FC2847' },
+  { id: 'today',     label: 'Today',     colour: '#FF9F0A' },
+  { id: 'this_week', label: 'This Week', colour: '#30D158' },
+]
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function endOfWeekStr() {
+  const d = new Date()
+  // Advance to Sunday (day 0 wraps to 7)
+  const daysUntilSunday = (7 - d.getDay()) % 7
+  d.setDate(d.getDate() + daysUntilSunday)
+  return d.toISOString().slice(0, 10)
+}
+
+function matchesDue(task: Task, filter: DueFilter): boolean {
+  if (!task.due_date || task.status === 'done') return false
+  const due  = task.due_date.slice(0, 10)
+  const today = todayStr()
+  const eow   = endOfWeekStr()
+  if (filter === 'overdue')   return due < today
+  if (filter === 'today')     return due === today
+  if (filter === 'this_week') return due >= today && due <= eow
+  return false
+}
 
 function FilterRow({
   colour, label, count, isActive, onClick
@@ -48,11 +77,17 @@ export default function Sidebar({ width }: { width?: number }) {
     activeLabel, setActiveLabel,
     activeStatus, setActiveStatus,
     activePriority, setActivePriority,
+    activeDue, setActiveDue,
     allTasks
   } = useTaskStore()
 
-  const clearAll = () => { setActiveLabel(null); setActiveStatus(null); setActivePriority(null) }
-  const isAllActive = activeLabel === null && activeStatus === null && activePriority === null
+  const clearAll = () => {
+    setActiveLabel(null)
+    setActiveStatus(null)
+    setActivePriority(null)
+    setActiveDue(null)
+  }
+  const isAllActive = activeLabel === null && activeStatus === null && activePriority === null && activeDue === null
 
   return (
     <div
@@ -75,6 +110,25 @@ export default function Sidebar({ width }: { width?: number }) {
           <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isAllActive ? 'bg-[#c45d2e]' : 'bg-[#555555]'}`} />
           All Tasks
         </button>
+      </div>
+
+      <div className="h-px bg-[#2e2e2e] mx-3 mb-2 flex-shrink-0" />
+
+      {/* Due filters */}
+      <div className="px-2 pb-2 flex-shrink-0">
+        <div className="px-3 py-1.5 mb-1">
+          <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Due</span>
+        </div>
+        {DUE_META.map(d => (
+          <FilterRow
+            key={d.id}
+            colour={d.colour}
+            label={d.label}
+            count={allTasks.filter(t => matchesDue(t, d.id)).length}
+            isActive={activeDue === d.id}
+            onClick={() => setActiveDue(activeDue === d.id ? null : d.id)}
+          />
+        ))}
       </div>
 
       <div className="h-px bg-[#2e2e2e] mx-3 mb-2 flex-shrink-0" />

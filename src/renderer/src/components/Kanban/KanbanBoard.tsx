@@ -11,7 +11,7 @@ import {
   type CollisionDetection
 } from '@dnd-kit/core'
 import { useState, useMemo } from 'react'
-import { useTaskStore } from '../../stores/taskStore'
+import { useTaskStore, type DueFilter } from '../../stores/taskStore'
 import { KANBAN_COLUMNS, type Task, type TaskStatus, type LabelNode } from '../../../../shared/types'
 import KanbanColumn from './KanbanColumn'
 import TaskCard from './TaskCard'
@@ -35,6 +35,19 @@ function matchesSearch(task: Task, q: string, flat: LabelNode[]): boolean {
   return false
 }
 
+function matchesDue(task: Task, filter: DueFilter): boolean {
+  if (!task.due_date) return false
+  const due   = task.due_date.slice(0, 10)
+  const today = new Date().toISOString().slice(0, 10)
+  const d     = new Date()
+  d.setDate(d.getDate() + (7 - d.getDay()) % 7)
+  const eow   = d.toISOString().slice(0, 10)
+  if (filter === 'overdue')   return due < today
+  if (filter === 'today')     return due === today
+  if (filter === 'this_week') return due >= today && due <= eow
+  return false
+}
+
 // pointerWithin wins when the cursor is clearly inside a column; falls back to
 // rect intersection so drops at the very edge of a column still register.
 const kanbanCollision: CollisionDetection = (args) => {
@@ -43,7 +56,7 @@ const kanbanCollision: CollisionDetection = (args) => {
 }
 
 export default function KanbanBoard() {
-  const { tasks, labels, updateTask, searchQuery, activeStatus, activePriority } = useTaskStore()
+  const { tasks, labels, updateTask, searchQuery, activeStatus, activePriority, activeDue } = useTaskStore()
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [detailTask, setDetailTask] = useState<Task | null>(null)
 
@@ -53,10 +66,11 @@ export default function KanbanBoard() {
     tasks.filter(t => {
       if (activeStatus   && t.status   !== activeStatus)   return false
       if (activePriority && t.priority !== activePriority) return false
+      if (activeDue      && !matchesDue(t, activeDue))     return false
       if (searchQuery    && !matchesSearch(t, searchQuery, flatLabels)) return false
       return true
     }),
-    [tasks, searchQuery, activeStatus, activePriority, flatLabels]
+    [tasks, searchQuery, activeStatus, activePriority, activeDue, flatLabels]
   )
 
   const sensors = useSensors(
