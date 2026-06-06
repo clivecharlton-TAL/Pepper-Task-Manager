@@ -1,6 +1,7 @@
 import { format, parseISO, isPast, isToday, isTomorrow } from 'date-fns'
 import type { Task, TaskStatus, TaskPriority, LabelNode } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
+import MentionText from '../shared/MentionText'
 
 const STATUS_COLOURS: Record<TaskStatus, string> = {
   backlog:     '#6b7280',
@@ -86,9 +87,10 @@ export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className={`text-[13px] font-sans leading-snug mb-1 ${isDone ? 'text-[#555555] line-through' : 'text-[#f0f0f0]'}`}>
-            {task.title}
-          </p>
+          <MentionText
+            text={task.title}
+            className={`text-[13px] font-sans leading-snug mb-1 ${isDone ? 'text-[#555555] line-through' : 'text-[#f0f0f0]'}`}
+          />
 
           {task.notes && (
             <p className="text-[11px] text-[#666666] leading-relaxed mb-1.5 truncate">

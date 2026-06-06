@@ -5,6 +5,15 @@ import remarkGfm from 'remark-gfm'
 import type { Task, TaskPriority, TaskStatus, LabelNode } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
 import LabelTreeView from '../QuickAdd/LabelTreeView'
+import MentionPopover from '../shared/MentionPopover'
+import { TEAM_MEMBERS } from '../../../../shared/team'
+
+type MentionState = { active: boolean; start: number; query: string; highlight: number; rect: DOMRect | null }
+const NO_MENTION: MentionState = { active: false, start: -1, query: '', highlight: 0, rect: null }
+function filteredMembers(query: string) {
+  const q = query.toLowerCase()
+  return TEAM_MEMBERS.filter(m => m.name.toLowerCase().includes(q))
+}
 
 const STATUS_OPTS: { id: TaskStatus; label: string; colour: string }[] = [
   { id: 'backlog',     label: 'Backlog',     colour: '#6b7280' },
@@ -44,6 +53,75 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [notesMode,      setNotesMode]      = useState<'edit' | 'preview'>('preview')
   const [showLabels,     setShowLabels]     = useState(false)
   const labelPickerRef = useRef<HTMLDivElement>(null)
+  const titleInputRef  = useRef<HTMLInputElement>(null)
+  const notesRef       = useRef<HTMLTextAreaElement>(null)
+  const [titleMention, setTitleMention] = useState<MentionState>(NO_MENTION)
+  const [notesMention, setNotesMention] = useState<MentionState>(NO_MENTION)
+  const titlePending   = useRef<number | null>(null)
+  const notesPending   = useRef<number | null>(null)
+
+  function handleMentionKeyDown(
+    e: React.KeyboardEvent,
+    mention: MentionState,
+    setMention: (m: MentionState) => void,
+    pending: React.MutableRefObject<number | null>,
+    inputEl: HTMLInputElement | HTMLTextAreaElement | null,
+    insertFn: (name: string) => void
+  ) {
+    if (e.key === '@') {
+      const pos = inputEl?.selectionStart ?? 0
+      pending.current = pos
+    }
+    if (mention.active) {
+      const members = filteredMembers(mention.query)
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMention({ ...mention, highlight: Math.min(mention.highlight + 1, members.length - 1) }) }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); setMention({ ...mention, highlight: Math.max(mention.highlight - 1, 0) }) }
+      if (e.key === 'Enter' && members[mention.highlight]) { e.preventDefault(); insertFn(members[mention.highlight].name) }
+      if (e.key === 'Escape')    { e.stopPropagation(); setMention(NO_MENTION) }
+    }
+  }
+
+  function handleMentionChange(
+    val: string,
+    pos: number,
+    mention: MentionState,
+    setMention: (m: MentionState) => void,
+    pending: React.MutableRefObject<number | null>,
+    inputEl: HTMLElement | null
+  ) {
+    if (pending.current !== null) {
+      const start = pending.current
+      pending.current = null
+      if (val[start] === '@') {
+        const rect = inputEl?.getBoundingClientRect() ?? null
+        setMention({ active: true, start, query: '', highlight: 0, rect })
+      }
+      return
+    }
+    if (mention.active) {
+      if (val[mention.start] !== '@' || pos <= mention.start) {
+        setMention(NO_MENTION)
+      } else {
+        setMention({ ...mention, query: val.slice(mention.start + 1, pos), highlight: 0 })
+      }
+    }
+  }
+
+  const insertTitleMention = (name: string) => {
+    const before = title.slice(0, titleMention.start)
+    const after  = title.slice(titleMention.start + 1 + titleMention.query.length)
+    setTitle(`${before}@${name} ${after}`)
+    setTitleMention(NO_MENTION)
+    titleInputRef.current?.focus()
+  }
+
+  const insertNotesMention = (name: string) => {
+    const before = notes.slice(0, notesMention.start)
+    const after  = notes.slice(notesMention.start + 1 + notesMention.query.length)
+    setNotes(`${before}@${name} ${after}`)
+    setNotesMention(NO_MENTION)
+    notesRef.current?.focus()
+  }
 
   const isDirty =
     title.trim() !== task.title ||
@@ -102,12 +180,30 @@ export default function TaskDetailModal({ task, onClose }: Props) {
         {/* Title */}
         <div className="flex items-center gap-3 px-6 pt-5 pb-4 flex-shrink-0 border-b border-[#2e2e2e]">
           <input
+            ref={titleInputRef}
             value={title}
-            onChange={e => setTitle(e.target.value)}
-            onKeyDown={e => e.stopPropagation()}
+            onChange={e => {
+              const val = e.target.value
+              const pos = e.target.selectionStart ?? val.length
+              setTitle(val)
+              handleMentionChange(val, pos, titleMention, setTitleMention, titlePending, titleInputRef.current)
+            }}
+            onKeyDown={e => {
+              e.stopPropagation()
+              handleMentionKeyDown(e, titleMention, setTitleMention, titlePending, titleInputRef.current, insertTitleMention)
+            }}
             placeholder="Task title"
             className="flex-1 bg-transparent text-[16px] font-sans font-medium text-[#f0f0f0] focus:outline-none placeholder-[#444444]"
           />
+          {titleMention.active && titleMention.rect && (
+            <MentionPopover
+              query={titleMention.query}
+              highlight={titleMention.highlight}
+              anchorRect={titleMention.rect}
+              onSelect={insertTitleMention}
+              onClose={() => setTitleMention(NO_MENTION)}
+            />
+          )}
           <button
             onClick={handleClose}
             className="flex-shrink-0 text-[#555555] hover:text-[#f0f0f0] transition-colors text-[18px] leading-none"
@@ -139,14 +235,34 @@ export default function TaskDetailModal({ task, onClose }: Props) {
             </div>
 
             {notesMode === 'edit' ? (
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                onKeyDown={e => e.stopPropagation()}
-                placeholder="Add a description… (markdown supported)"
-                rows={6}
-                className="w-full bg-[#1e1e1e] border border-[#333333] rounded-lg px-3 py-2.5 text-[13px] font-sans text-[#d4d4d4] placeholder-[#444444] resize-none focus:outline-none focus:border-[#c45d2e]/50 leading-relaxed"
-              />
+              <>
+                <textarea
+                  ref={notesRef}
+                  value={notes}
+                  onChange={e => {
+                    const val = e.target.value
+                    const pos = e.target.selectionStart ?? val.length
+                    setNotes(val)
+                    handleMentionChange(val, pos, notesMention, setNotesMention, notesPending, notesRef.current)
+                  }}
+                  onKeyDown={e => {
+                    e.stopPropagation()
+                    handleMentionKeyDown(e, notesMention, setNotesMention, notesPending, notesRef.current, insertNotesMention)
+                  }}
+                  placeholder="Add a description… (markdown supported)"
+                  rows={6}
+                  className="w-full bg-[#1e1e1e] border border-[#333333] rounded-lg px-3 py-2.5 text-[13px] font-sans text-[#d4d4d4] placeholder-[#444444] resize-none focus:outline-none focus:border-[#c45d2e]/50 leading-relaxed"
+                />
+                {notesMention.active && notesMention.rect && (
+                  <MentionPopover
+                    query={notesMention.query}
+                    highlight={notesMention.highlight}
+                    anchorRect={notesMention.rect}
+                    onSelect={insertNotesMention}
+                    onClose={() => setNotesMention(NO_MENTION)}
+                  />
+                )}
+              </>
             ) : (
               <div className="bg-[#1e1e1e] border border-[#333333] rounded-lg px-3 py-2.5 min-h-[120px]">
                 {notes ? (

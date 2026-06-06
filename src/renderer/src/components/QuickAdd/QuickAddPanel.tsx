@@ -1,7 +1,17 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react'
 import { useTaskStore } from '../../stores/taskStore'
 import LabelTreeView from './LabelTreeView'
+import MentionPopover from '../shared/MentionPopover'
 import type { TaskPriority } from '../../../../shared/types'
+import { TEAM_MEMBERS } from '../../../../shared/team'
+
+type MentionState = { active: boolean; start: number; query: string; highlight: number; rect: DOMRect | null }
+const NO_MENTION: MentionState = { active: false, start: -1, query: '', highlight: 0, rect: null }
+
+function filteredMembers(query: string) {
+  const q = query.toLowerCase()
+  return TEAM_MEMBERS.filter(m => m.name.toLowerCase().includes(q))
+}
 
 type View = 'form' | 'labels'
 
@@ -22,6 +32,10 @@ export default function QuickAddPanel() {
   const [emailCtx, setEmailCtx]           = useState<{ id: string; subject: string; body?: string } | null>(null)
   const titleRef = useRef<HTMLInputElement>(null)
   const notesRef = useRef<HTMLTextAreaElement>(null)
+  const [titleMention, setTitleMention] = useState<MentionState>(NO_MENTION)
+  const [notesMention, setNotesMention] = useState<MentionState>(NO_MENTION)
+  const titlePending = useRef<number | null>(null)
+  const notesPending = useRef<number | null>(null)
 
   useEffect(() => {
     titleRef.current?.focus()
@@ -58,6 +72,79 @@ export default function QuickAddPanel() {
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() }
   }
+
+  // ─── Mention helpers ───────────────────────────────────────────────────────
+  function makeMentionKeyDown(
+    mention: MentionState,
+    setMention: (m: MentionState) => void,
+    pending: React.MutableRefObject<number | null>,
+    inputEl: () => HTMLElement | null,
+    insertMention: (name: string) => void
+  ) {
+    return (e: KeyboardEvent) => {
+      if (e.key === '@') {
+        const el = inputEl()
+        const pos = (el as HTMLInputElement | HTMLTextAreaElement)?.selectionStart ?? 0
+        pending.current = pos
+      }
+      if (mention.active) {
+        const members = filteredMembers(mention.query)
+        if (e.key === 'ArrowDown') { e.preventDefault(); setMention({ ...mention, highlight: Math.min(mention.highlight + 1, members.length - 1) }) }
+        if (e.key === 'ArrowUp')   { e.preventDefault(); setMention({ ...mention, highlight: Math.max(mention.highlight - 1, 0) }) }
+        if (e.key === 'Enter' && members[mention.highlight]) { e.preventDefault(); insertMention(members[mention.highlight].name) }
+        if (e.key === 'Escape')    { e.stopPropagation(); setMention(NO_MENTION) }
+      }
+    }
+  }
+
+  function makeMentionChange(
+    mention: MentionState,
+    setMention: (m: MentionState) => void,
+    pending: React.MutableRefObject<number | null>,
+    inputEl: () => HTMLInputElement | HTMLTextAreaElement | null,
+    setValue: (v: string) => void
+  ) {
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const val = e.target.value
+      const pos = e.target.selectionStart ?? val.length
+      setValue(val)
+      if (pending.current !== null) {
+        const start = pending.current
+        pending.current = null
+        if (val[start] === '@') {
+          const rect = (inputEl() as HTMLElement)?.getBoundingClientRect() ?? null
+          setMention({ active: true, start, query: '', highlight: 0, rect })
+        }
+        return
+      }
+      if (mention.active) {
+        if (val[mention.start] !== '@' || pos <= mention.start) {
+          setMention(NO_MENTION)
+        } else {
+          setMention({ ...mention, query: val.slice(mention.start + 1, pos), highlight: 0 })
+        }
+      }
+    }
+  }
+
+  function makeInsertMention(
+    mention: MentionState,
+    setMention: (m: MentionState) => void,
+    value: string,
+    setValue: (v: string) => void,
+    focus: () => void
+  ) {
+    return (name: string) => {
+      const before = value.slice(0, mention.start)
+      const after  = value.slice(mention.start + 1 + mention.query.length)
+      setValue(`${before}@${name} ${after}`)
+      setMention(NO_MENTION)
+      focus()
+    }
+  }
+
+  const insertTitleMention = makeInsertMention(titleMention, setTitleMention, title, setTitle, () => titleRef.current?.focus())
+  const insertNotesMention = makeInsertMention(notesMention, setNotesMention, notes, setNotes, () => notesRef.current?.focus())
 
   const activePriority = PRIORITIES.find(p => p.value === priority)!
 
@@ -123,11 +210,23 @@ export default function QuickAddPanel() {
         <input
           ref={titleRef}
           value={title}
-          onChange={e => setTitle(e.target.value)}
-          onKeyDown={onKeyDown}
+          onChange={makeMentionChange(titleMention, setTitleMention, titlePending, () => titleRef.current, setTitle)}
+          onKeyDown={e => {
+            makeMentionKeyDown(titleMention, setTitleMention, titlePending, () => titleRef.current, insertTitleMention)(e)
+            onKeyDown(e)
+          }}
           placeholder="What needs to be done?"
-          className="w-full text-[15px] font-sans text-[#f0f0f0] placeholder-[#6b7280] bg-transparent border-none"
+          className="w-full text-[15px] font-sans text-[#f0f0f0] placeholder-[#6b7280] bg-transparent border-none focus:outline-none"
         />
+        {titleMention.active && titleMention.rect && (
+          <MentionPopover
+            query={titleMention.query}
+            highlight={titleMention.highlight}
+            anchorRect={titleMention.rect}
+            onSelect={insertTitleMention}
+            onClose={() => setTitleMention(NO_MENTION)}
+          />
+        )}
       </div>
 
       {/* Notes */}
@@ -135,11 +234,21 @@ export default function QuickAddPanel() {
         <textarea
           ref={notesRef}
           value={notes}
-          onChange={e => setNotes(e.target.value)}
+          onChange={makeMentionChange(notesMention, setNotesMention, notesPending, () => notesRef.current, setNotes)}
+          onKeyDown={makeMentionKeyDown(notesMention, setNotesMention, notesPending, () => notesRef.current, insertNotesMention)}
           placeholder="Add description…"
           rows={3}
           className="w-full text-[12px] font-sans text-[#c0c0c0] placeholder-[#444444] bg-transparent border-none resize-none leading-relaxed focus:outline-none"
         />
+        {notesMention.active && notesMention.rect && (
+          <MentionPopover
+            query={notesMention.query}
+            highlight={notesMention.highlight}
+            anchorRect={notesMention.rect}
+            onSelect={insertNotesMention}
+            onClose={() => setNotesMention(NO_MENTION)}
+          />
+        )}
       </div>
 
       <div className="h-px bg-[#333333] mx-4 flex-shrink-0" />

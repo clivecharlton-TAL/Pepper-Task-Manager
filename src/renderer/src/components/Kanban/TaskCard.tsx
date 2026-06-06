@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { format, parseISO, isPast, isToday, isTomorrow } from 'date-fns'
 import type { Task, TaskPriority, LabelNode } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
+import MentionText from '../shared/MentionText'
 
 const PRIORITY_COLOURS: Record<TaskPriority, string> = {
   high:   '#FC2847',
@@ -55,7 +56,7 @@ export default function TaskCard({ task, isDragging, onOpen }: Props) {
       />
 
       {/* Title */}
-      <p className="text-[13px] text-[#f0f0f0] leading-snug pr-4 mb-1.5">{task.title}</p>
+      <MentionText text={task.title} className="text-[13px] text-[#f0f0f0] leading-snug pr-4 mb-1.5 block" />
 
       {/* Notes */}
       {task.notes && (
