@@ -10,6 +10,32 @@ const STATUS_COLOURS: Record<TaskStatus, string> = {
   done:        '#4caf82',
 }
 
+function StatusIcon({ status }: { status: TaskStatus }) {
+  const colour = STATUS_COLOURS[status]
+  if (status === 'backlog') return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="7" stroke={colour} strokeWidth="1.5" strokeDasharray="3 2.5"/>
+    </svg>
+  )
+  if (status === 'todo') return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="7" stroke={colour} strokeWidth="1.5"/>
+    </svg>
+  )
+  if (status === 'in_progress') return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="7" stroke={colour} strokeWidth="1.5"/>
+      <path d="M2 9 A7 7 0 0 1 16 9 Z" fill={colour}/>
+    </svg>
+  )
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8.5" fill={colour}/>
+      <path d="M5.5 9.2 L7.5 11.2 L12.5 6.5" stroke="#1c1c1e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
 const PRIORITY_COLOURS: Record<TaskPriority, string> = {
   high:   '#FC2847',
   medium: '#FFC400',
@@ -45,7 +71,6 @@ interface Props {
 export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
   const { deleteTask, updateTask } = useTaskStore()
   const isDone = task.status === 'done'
-  const statusColour = STATUS_COLOURS[task.status]
   const due = task.due_date ? dueDateLabel(task.due_date) : null
   const labelMeta = task.labels
     .map(id => flatLabels.find(l => l.id === id))
@@ -66,23 +91,10 @@ export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={toggleDone}
-          className="flex-shrink-0 mt-0.5 group/circle"
+          className="flex-shrink-0 mt-0.5 transition-opacity hover:opacity-70"
           title={isDone ? 'Mark as todo' : 'Mark as done'}
         >
-          <div
-            className="w-[18px] h-[18px] rounded-full border-[1.5px] flex items-center justify-center transition-all group-hover/circle:border-[#4caf82] group-hover/circle:bg-[#4caf82]/20"
-            style={{
-              borderColor: isDone ? STATUS_COLOURS.done : statusColour,
-              backgroundColor: isDone ? STATUS_COLOURS.done : 'transparent',
-            }}
-          >
-            {/* Checkmark — always visible when done, shown on hover when not */}
-            <svg width="9" height="9" viewBox="0 0 9 9" fill="none"
-              className={isDone ? 'opacity-100' : 'opacity-0 group-hover/circle:opacity-60'}
-            >
-              <path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke={isDone ? '#1c1c1e' : '#4caf82'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <StatusIcon status={task.status} />
         </button>
 
         {/* Content */}

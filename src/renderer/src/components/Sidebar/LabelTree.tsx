@@ -42,8 +42,17 @@ function LabelRow({ node, depth, tasks }: { node: LabelNode; depth: number; task
           onClick={e => { e.stopPropagation(); setExpanded(x => !x) }}
         >▶</span>
 
-        {/* Colour dot */}
-        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: node.colour }} />
+        {/* Tag icon (Lucide-style: rounded body upper-left, diagonal tip lower-right) */}
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="flex-shrink-0">
+          <path
+            d="M7.3 1.5 A1.2 1.2 0 0 0 6.5 1.2 H2.3 A1.2 1.2 0 0 0 1.2 2.3 V6.5 A1.2 1.2 0 0 0 1.5 7.3 L6.6 12.4 A1.4 1.4 0 0 0 8.6 12.4 L12.4 8.6 A1.4 1.4 0 0 0 12.4 6.6 Z"
+            stroke={node.colour}
+            strokeWidth="1.3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="4.4" cy="4.4" r="0.9" fill={node.colour}/>
+        </svg>
 
         {/* Name */}
         <span className={`font-mono text-[11px] tracking-wide truncate flex-1 transition-colors group-hover:text-[#f0f0f0] ${depthTextClass(depth, isActive)}`}>

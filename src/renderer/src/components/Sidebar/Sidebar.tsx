@@ -1,24 +1,118 @@
+import type { ReactNode } from 'react'
 import { useTaskStore, type DueFilter } from '../../stores/taskStore'
 import LabelTree from './LabelTree'
 import type { Task, TaskStatus, TaskPriority } from '../../../../shared/types'
 
-const STATUS_META: { id: TaskStatus; label: string; colour: string }[] = [
-  { id: 'backlog',     label: 'Backlog',     colour: '#6b7280' },
-  { id: 'todo',        label: 'Todo',        colour: '#4a9eca' },
-  { id: 'in_progress', label: 'In Progress', colour: '#d4a843' },
-  { id: 'done',        label: 'Done',        colour: '#4caf82' },
+function IconBacklog() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+      <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.4" strokeDasharray="2.5 2"/>
+    </svg>
+  )
+}
+
+function IconTodo() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+      <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.4"/>
+    </svg>
+  )
+}
+
+function IconInProgress() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+      <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.4"/>
+      <path d="M2 7 A5 5 0 0 1 12 7 Z" fill="currentColor"/>
+    </svg>
+  )
+}
+
+function IconDone() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+      <circle cx="7" cy="7" r="5.5" fill="currentColor"/>
+      <path d="M4.5 7.2 L6.2 8.9 L9.5 5.2" stroke="#1c1c1e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+const STATUS_META: { id: TaskStatus; label: string; colour: string; icon: ReactNode }[] = [
+  { id: 'backlog',     label: 'Backlog',     colour: '#6b7280', icon: <IconBacklog /> },
+  { id: 'todo',        label: 'Todo',        colour: '#4a9eca', icon: <IconTodo /> },
+  { id: 'in_progress', label: 'In Progress', colour: '#d4a843', icon: <IconInProgress /> },
+  { id: 'done',        label: 'Done',        colour: '#4caf82', icon: <IconDone /> },
 ]
 
-const PRIORITY_META: { id: TaskPriority; label: string; colour: string }[] = [
-  { id: 'high',   label: 'High',   colour: '#FC2847' },
-  { id: 'medium', label: 'Medium', colour: '#FFC400' },
-  { id: 'low',    label: 'Low',    colour: '#30D158' },
+function IconFlagFilled() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" strokeLinecap="round">
+      <line x1="3" y1="1.5" x2="3" y2="12.5" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M3 2 L11.5 4.5 L3 7 Z" fill="currentColor"/>
+    </svg>
+  )
+}
+
+function IconFlagOutline() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="1.5" x2="3" y2="12.5" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M3 2 L11.5 4.5 L3 7 Z" stroke="currentColor" strokeWidth="1.2"/>
+    </svg>
+  )
+}
+
+function IconDash() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" strokeLinecap="round">
+      <line x1="2.5" y1="7" x2="11.5" y2="7" stroke="currentColor" strokeWidth="1.5"/>
+    </svg>
+  )
+}
+
+const PRIORITY_META: { id: TaskPriority; label: string; colour: string; icon: ReactNode }[] = [
+  { id: 'high',   label: 'High',   colour: '#FC2847', icon: <IconFlagFilled /> },
+  { id: 'medium', label: 'Medium', colour: '#FFC400', icon: <IconFlagOutline /> },
+  { id: 'low',    label: 'Low',    colour: '#30D158', icon: <IconDash /> },
 ]
 
-const DUE_META: { id: DueFilter; label: string; colour: string }[] = [
-  { id: 'overdue',   label: 'Overdue',   colour: '#FC2847' },
-  { id: 'today',     label: 'Today',     colour: '#FF9F0A' },
-  { id: 'this_week', label: 'This Week', colour: '#30D158' },
+function IconClock() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <circle cx="7" cy="7" r="5.5"/>
+      <path d="M7 3.5V7l2.5 1.5"/>
+    </svg>
+  )
+}
+
+function IconCalendarDay() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="2.5" width="11" height="10" rx="1.5"/>
+      <path d="M1.5 6.5h11"/>
+      <path d="M4.5 1v3M9.5 1v3"/>
+      <rect x="4.5" y="8" width="5" height="2.5" rx="0.5" fill="currentColor" stroke="none" opacity="0.8"/>
+    </svg>
+  )
+}
+
+function IconCalendarWeek() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="2.5" width="11" height="10" rx="1.5"/>
+      <path d="M1.5 6.5h11"/>
+      <path d="M4.5 1v3M9.5 1v3"/>
+      <circle cx="4" cy="9.5" r="0.9" fill="currentColor" stroke="none"/>
+      <circle cx="7" cy="9.5" r="0.9" fill="currentColor" stroke="none"/>
+      <circle cx="10" cy="9.5" r="0.9" fill="currentColor" stroke="none"/>
+    </svg>
+  )
+}
+
+const DUE_META: { id: DueFilter; label: string; colour: string; icon: ReactNode }[] = [
+  { id: 'overdue',   label: 'Overdue',   colour: '#FC2847', icon: <IconClock /> },
+  { id: 'today',     label: 'Today',     colour: '#FF9F0A', icon: <IconCalendarDay /> },
+  { id: 'this_week', label: 'This Week', colour: '#30D158', icon: <IconCalendarWeek /> },
 ]
 
 function todayStr() {
@@ -45,8 +139,8 @@ function matchesDue(task: Task, filter: DueFilter): boolean {
 }
 
 function FilterRow({
-  colour, label, count, isActive, onClick
-}: { colour: string; label: string; count: number; isActive: boolean; onClick: () => void }) {
+  colour, label, count, isActive, onClick, icon
+}: { colour: string; label: string; count: number; isActive: boolean; onClick: () => void; icon?: ReactNode }) {
   return (
     <button
       onClick={onClick}
@@ -54,7 +148,13 @@ function FilterRow({
         isActive ? 'bg-[#2a2a2a]' : 'hover:bg-[#2a2a2a]'
       }`}
     >
-      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: colour }} />
+      {icon ? (
+        <span className="w-4 h-4 flex items-center justify-center flex-shrink-0" style={{ color: colour }}>
+          {icon}
+        </span>
+      ) : (
+        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: colour }} />
+      )}
       <span className={`font-mono text-[11px] tracking-wide flex-1 transition-colors ${
         isActive ? 'text-[#f0f0f0] font-medium' : 'text-[#a8a8a8] group-hover:text-[#f0f0f0]'
       }`}>
@@ -127,6 +227,7 @@ export default function Sidebar({ width }: { width?: number }) {
             count={allTasks.filter(t => matchesDue(t, d.id)).length}
             isActive={activeDue === d.id}
             onClick={() => setActiveDue(activeDue === d.id ? null : d.id)}
+            icon={d.icon}
           />
         ))}
       </div>
@@ -146,6 +247,7 @@ export default function Sidebar({ width }: { width?: number }) {
             count={allTasks.filter(t => t.status === s.id).length}
             isActive={activeStatus === s.id}
             onClick={() => setActiveStatus(activeStatus === s.id ? null : s.id)}
+            icon={s.icon}
           />
         ))}
       </div>
@@ -165,6 +267,7 @@ export default function Sidebar({ width }: { width?: number }) {
             count={allTasks.filter(t => t.status !== 'done' && t.priority === p.id).length}
             isActive={activePriority === p.id}
             onClick={() => setActivePriority(activePriority === p.id ? null : p.id)}
+            icon={p.icon}
           />
         ))}
       </div>
