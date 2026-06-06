@@ -36,7 +36,7 @@ function matchesSearch(task: Task, q: string, flat: LabelNode[]): boolean {
 }
 
 function matchesDue(task: Task, filter: DueFilter): boolean {
-  if (!task.due_date) return false
+  if (!task.due_date || task.status === 'done') return false
   const due   = task.due_date.slice(0, 10)
   const today = new Date().toISOString().slice(0, 10)
   const d     = new Date()
