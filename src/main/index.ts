@@ -142,6 +142,7 @@ function toggleQuickAdd(ctx?: EmailContext | TextContext): void {
 
 function createTray(): Tray {
   const icon = nativeImage.createFromDataURL(TRAY_ICON_BASE64)
+  icon.setTemplateImage(true)
   const t = new Tray(icon)
 
   const menu = Menu.buildFromTemplate([
@@ -167,14 +168,8 @@ function createTray(): Tray {
   return t
 }
 
-// 44×44 red chilli pepper tray icon
-const TRAY_ICON_BASE64 =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAsCAYAAAAehFoBAAABOklEQVR4nO2YPRKCMBCFNxmP' +
-  'QGNjQ2PjtrmOR7O38BxpsbGhobHhDjh0DKOS7E8MwTdjgYbdz+fuJgiwMhmNoO7ihum1P3uxPBaUYT+9lwXwCNY/ehhf' +
-  '7z6DHB3WloUtA/svzeWFGi+Zw+5fwyuRlQzW1PVwuwJUxwq0ZLiA1HuxbU1ShzmwnPvtL2A5cQw3yeG099Pr7v50muVh' +
-  'qLBz0LliwTEQ2mrAhq6hlEeZZ4km0l3K2lCXy3R4VcCN0MwN1VK+8hzmzNeOsIksqXyHQ53TcHeU4TaCxFkiZoveAVNa' +
-  'Tm67hrMHRuLjTKxC8pTpcAqXUfoAn4tszGItlzEibtkOa7iMkfFIDktBIyEOuSS40Jj6rypOUmR8WXbTxSZH5i8jMiVC' +
-  'IVCg9sXG2hIMCjWqykYwPfBLj8EX2ryJiNza6VgAAAAASUVORK5CYII='
+// pepper tray icon (44px @2x = 22pt, template)
+const TRAY_ICON_BASE64 = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAsQAAALEBxi1JjQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAF8SURBVEiJtdW/axRBGMbxj3f4IwSDQlLYpA0YK5V0gp0iJBbXqJUQA9G/wVKIV1kEUqWxESyTJk0QiZhoa6qAYEAOFcT88jhUzFnsHO5d9tbdc++BF4adl+c7874zO/Sm19jFW8yg1KNPV71CMxaLRQPgNO7ie4Bc7wcEHgbA834BLgXA+36Y38ebADgU9Wa2SMBX7c1u4ks8oZfjVcZ4GD9NmG99u4DjPfi7h7UwPoUqPoR4jJNhbgUPoIJPISoZAK07MJeSUw0561Dzt361DICDWP4LTGI0xBRexubr0NDepPMp5sOONjUtfpew02EynQK4nGGHcX2Ddx3UH7iSkFzGRs4dbJZFN/Fih9EtnBA1fl9UtmddwGlahds5V5Un7sAZ7PXBfA9nS6KHYyHn1rPoidgBGsbnAle/jaFO4lX8KsC8IeU4T/8npI6baXWDa6La5TX/iIl/mbc0gnn8zLjqRxhMMjqWATSJGxjDOQyInsctLGNJ9ANM1B9ebd9s4LOUyQAAAABJRU5ErkJggg==`
 
 app.whenReady().then(async () => {
   registerIpcHandlers()
