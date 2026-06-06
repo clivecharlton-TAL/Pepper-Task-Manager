@@ -167,22 +167,14 @@ function createTray(): Tray {
   return t
 }
 
-// 22×22 chilli pepper tray icon
+// 44×44 red chilli pepper tray icon
 const TRAY_ICON_BASE64 =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAADU0lEQVR4nK2UTWhcVRTH/+fe' +
-  '+2Yyk2nS0lbbUi1YSBTEJtaIZjOh1ZI6kIXw3EihuOhKF4oLcfN8Ql1YqBvBqogbVw7oSogoaQaKdRNsbbGItWAtjZnW' +
-  'pJ2+TGbm3XuO3GdjP0xoYjzwFu++837nf+75AP4HiyKou89o7VQoxODKB3uepKJ+3ir9zviB8YZZCzOMwlwddS4eCx6n' +
-  'PO9ekgZrEiy4lf7YR3vOVT7e++nt3/+LYpIIRINj3QPnkle5oItXmrz9YOHaoa+y+45UHMe8askSRYrimJPKwHMXenJf' +
-  'XOzS+Yl1KqntKLyXY3r/5OvfXMmirwoahpqqVZdWdo8YwrdwQmmS2nlB7sudhdnDu0rPnn9t4oe3oohWDJZFEaOjOYs/' +
-  'TpvA9FvHbt6xSlpM3W13af33s/2E6ab3/Vf/LWthqAgQq6aHTWldv3XiNEFrAVkWJF16++/lzQ9lvtFqwPU6eSWk809h' +
-  '/SaBIvFpWIZ4iLC0rdI3Mt/4tpa5p42M+EoL5QsVpCn5R4jQcSxBFkSmZxvq8k3vLNjKihbH3NnbN6SKpac5abBSpFMn' +
-  'aFnmbqMIRONPTE2lx8tlQysBiy9avZ4VTvXc9y5MoLh5Q6AUrrWtaCJKUtcSxpEssVqNM997yj2021CtZu3oY2/ojZtH' +
-  '3NxVpyE66TAWLNsNgdGpyNs7Tpy5kGUGZOBl2038cvkpJN+3dt+jL+ktD37irHM0N6M6QjSTpHZDzpjrzh1/oHbmGYQh' +
-  'oVrN6rAkWPxZuay9Sv/e2T/wZrBxy2EHxTQ7TSmDZuZTWzLatJ2cB6vhrSdOXfWsRbV3gMUrnCyrRaDsH+pzio9qoyqO' +
-  'AtZpi5qW8eeCtT3GBC3Hv153sq/fX0EERfEt6NKKxwa3MauXRfCK1qrEzln202WFm6mYXqOQOJ6c67RffOS7ny9/HkK/' +
-  'UIW7m5M1fTWEClu7HgbMQQgOQKv72c8ri12wElgnpEFoO1dnUkePTZ4+EgO8lNI7wBgd2NQBTuWKXduQumycWHyPChqp' +
-  'g0B+UUSfzSv+cOfE2Rn/YwQoD1+u+H+PKYDfhge35nN2yAr6mKVXiBYCwaWiwdneRu5HmppKs6u6ueGWA67apFw2/2y4' +
-  'FdhfPZykLwer/1AAAAAASUVORK5CYII='
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAsCAYAAAAehFoBAAABOklEQVR4nO2YPRKCMBCFNxmP' +
+  'QGNjQ2PjtrmOR7O38BxpsbGhobHhDjh0DKOS7E8MwTdjgYbdz+fuJgiwMhmNoO7ihum1P3uxPBaUYT+9lwXwCNY/ehhf' +
+  '7z6DHB3WloUtA/svzeWFGi+Zw+5fwyuRlQzW1PVwuwJUxwq0ZLiA1HuxbU1ShzmwnPvtL2A5cQw3yeG099Pr7v50muVh' +
+  'qLBz0LliwTEQ2mrAhq6hlEeZZ4km0l3K2lCXy3R4VcCN0MwN1VK+8hzmzNeOsIksqXyHQ53TcHeU4TaCxFkiZoveAVNa' +
+  'Tm67hrMHRuLjTKxC8pTpcAqXUfoAn4tszGItlzEibtkOa7iMkfFIDktBIyEOuSS40Jj6rypOUmR8WXbTxSZH5i8jMiVC' +
+  'IVCg9sXG2hIMCjWqykYwPfBLj8EX2ryJiNza6VgAAAAASUVORK5CYII='
 
 app.whenReady().then(async () => {
   registerIpcHandlers()
