@@ -33,7 +33,7 @@ function applyEvent(state: Pick<TaskStore, 'tasks' | 'allTasks' | 'activeLabel'>
   if (event.type === 'task:created') {
     const { task } = event
     const alreadyKnown = (arr: Task[]) => arr.some(t => t.id === task.id)
-    const inFilter = !activeLabel || task.labels.includes(activeLabel)
+    const inFilter = !activeLabel || task.labels.some(l => l === activeLabel || l.startsWith(activeLabel + '/'))
     return {
       allTasks: alreadyKnown(allTasks) ? allTasks : [task, ...allTasks],
       tasks: alreadyKnown(tasks) ? tasks : inFilter ? [task, ...tasks] : tasks
@@ -42,7 +42,8 @@ function applyEvent(state: Pick<TaskStore, 'tasks' | 'allTasks' | 'activeLabel'>
 
   if (event.type === 'task:updated') {
     const { task } = event
-    const inFilter = !activeLabel || task.labels.includes(activeLabel)
+    // Match exact label OR any child label (e.g. '30.Arch' matches '30.Arch/00.Chaos')
+    const inFilter = !activeLabel || task.labels.some(l => l === activeLabel || l.startsWith(activeLabel + '/'))
     const updateOrRemove = (arr: Task[]) =>
       arr.some(t => t.id === task.id)
         ? arr.map(t => t.id === task.id ? task : t)
