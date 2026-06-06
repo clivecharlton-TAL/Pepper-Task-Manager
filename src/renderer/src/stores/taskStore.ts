@@ -1,0 +1,136 @@
+import { create } from 'zustand'
+import type { Task, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, TaskStatus, TaskPriority, DomainEvent } from '../../../shared/types'
+
+interface TaskStore {
+  tasks: Task[]
+  allTasks: Task[]
+  labels: LabelNode[]
+  filters: TaskFilters
+  activeLabel: string | null
+  activeStatus: TaskStatus | null
+  activePriority: TaskPriority | null
+  searchQuery: string
+  viewMode: 'kanban' | 'list'
+
+  init: () => () => void
+  loadTasks: () => Promise<void>
+  loadAllTasks: () => Promise<void>
+  loadLabels: () => Promise<void>
+  createTask: (input: CreateTaskInput) => Promise<Task>
+  updateTask: (input: UpdateTaskInput) => Promise<void>
+  deleteTask: (id: string) => Promise<void>
+  setFilter: (filters: TaskFilters) => void
+  setActiveLabel: (label: string | null) => void
+  setActiveStatus: (status: TaskStatus | null) => void
+  setActivePriority: (priority: TaskPriority | null) => void
+  setSearchQuery: (q: string) => void
+  setViewMode: (mode: 'kanban' | 'list') => void
+}
+
+function applyEvent(state: Pick<TaskStore, 'tasks' | 'allTasks' | 'activeLabel'>, event: DomainEvent) {
+  const { tasks, allTasks, activeLabel } = state
+
+  if (event.type === 'task:created') {
+    const { task } = event
+    const alreadyKnown = (arr: Task[]) => arr.some(t => t.id === task.id)
+    const inFilter = !activeLabel || task.labels.includes(activeLabel)
+    return {
+      allTasks: alreadyKnown(allTasks) ? allTasks : [task, ...allTasks],
+      tasks: alreadyKnown(tasks) ? tasks : inFilter ? [task, ...tasks] : tasks
+    }
+  }
+
+  if (event.type === 'task:updated') {
+    const { task } = event
+    const inFilter = !activeLabel || task.labels.includes(activeLabel)
+    const updateOrRemove = (arr: Task[]) =>
+      arr.some(t => t.id === task.id)
+        ? arr.map(t => t.id === task.id ? task : t)
+        : inFilter ? [...arr, task] : arr
+    return {
+      allTasks: allTasks.map(t => t.id === task.id ? task : t),
+      tasks: inFilter
+        ? updateOrRemove(tasks)
+        : tasks.filter(t => t.id !== task.id)
+    }
+  }
+
+  if (event.type === 'task:deleted') {
+    const drop = (arr: Task[]) => arr.filter(t => t.id !== event.id)
+    return { allTasks: drop(allTasks), tasks: drop(tasks) }
+  }
+
+  return {}
+}
+
+export const useTaskStore = create<TaskStore>((set, get) => ({
+  tasks: [],
+  allTasks: [],
+  labels: [],
+  filters: {},
+  activeLabel: null,
+  activeStatus: null,
+  activePriority: null,
+  searchQuery: '',
+  viewMode: 'kanban',
+
+  init: () => {
+    const unsubTasks = window.api.on('domain-event', (raw: unknown) => {
+      const event = raw as DomainEvent
+      if (event.type === 'labels:changed') {
+        get().loadLabels()
+        return
+      }
+      set(s => applyEvent({ tasks: s.tasks, allTasks: s.allTasks, activeLabel: s.activeLabel }, event))
+    })
+    return unsubTasks
+  },
+
+  loadTasks: async () => {
+    const { filters, activeLabel } = get()
+    const f = activeLabel ? { ...filters, label: activeLabel } : filters
+    const tasks = await window.api.tasks.list(f)
+    set({ tasks })
+  },
+
+  loadAllTasks: async () => {
+    const allTasks = await window.api.tasks.list({})
+    set({ allTasks })
+  },
+
+  loadLabels: async () => {
+    const labels = await window.api.labels.tree()
+    set({ labels })
+  },
+
+  createTask: async (input) => window.api.tasks.create(input),
+
+  updateTask: async (input) => {
+    // Optimistic: move card immediately so the UI doesn't wait for the IPC round-trip
+    set(s => ({
+      tasks:    s.tasks.map(t    => t.id === input.id ? { ...t, ...input } : t),
+      allTasks: s.allTasks.map(t => t.id === input.id ? { ...t, ...input } : t),
+    }))
+    await window.api.tasks.update(input)
+    // Domain event from the server confirms and corrects if needed
+  },
+
+  deleteTask: async (id) => { await window.api.tasks.delete(id) },
+
+  setFilter: (filters) => {
+    set({ filters })
+    get().loadTasks()
+  },
+
+  setActiveLabel: (label) => {
+    set({ activeLabel: label })
+    get().loadTasks()
+  },
+
+  setActiveStatus: (status) => set({ activeStatus: status }),
+
+  setActivePriority: (priority) => set({ activePriority: priority }),
+
+  setSearchQuery: (q) => set({ searchQuery: q }),
+  setViewMode: (mode) => set({ viewMode: mode }),
+}))

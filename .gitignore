@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+
+# electron-vite cache
+.vite/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# SQLite DB (local only)
+*.db
+*.db-journal
+
+# Env files
+.env
+.env.*
