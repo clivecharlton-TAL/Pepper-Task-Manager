@@ -1,5 +1,6 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { useState } from 'react'
 import type { Task, TaskStatus } from '../../../../shared/types'
 import TaskCard from './TaskCard'
 
@@ -20,6 +21,10 @@ interface Props {
 export default function KanbanColumn({ id, tasks, onOpenTask }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id })
   const meta = COLUMN_META[id]
+  const [doneExpanded, setDoneExpanded] = useState(false)
+
+  const isDone = id === 'done'
+  const visibleTasks = isDone && !doneExpanded ? [] : tasks
 
   return (
     <div
@@ -43,16 +48,32 @@ export default function KanbanColumn({ id, tasks, onOpenTask }: Props) {
       </div>
 
       {/* Tasks */}
-      <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={visibleTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
         <div className="flex-1 overflow-y-auto space-y-2 min-h-[80px]">
-          {tasks.map(task => <TaskCard key={task.id} task={task} onOpen={onOpenTask} />)}
-          {tasks.length === 0 && (
+          {visibleTasks.map(task => <TaskCard key={task.id} task={task} onOpen={onOpenTask} />)}
+
+          {/* Drop target always rendered so cards can be dragged into Done */}
+          {(visibleTasks.length === 0) && (
             <div
               className="h-20 flex items-center justify-center font-mono text-[10px] tracking-widest uppercase text-[#333333] rounded border border-dashed border-[#333333] transition-colors"
               style={isOver ? { borderColor: meta.colour + '60' } : {}}
             >
               Drop here
             </div>
+          )}
+
+          {/* Collapsed done tasks toggle */}
+          {isDone && tasks.length > 0 && (
+            <button
+              onClick={() => setDoneExpanded(e => !e)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded font-mono text-[10px] text-[#555555] hover:text-[#888888] hover:bg-[#2a2a2a] transition-colors"
+            >
+              <span className={`transition-transform ${doneExpanded ? 'rotate-90' : ''}`}>▶</span>
+              {doneExpanded
+                ? `Hide ${tasks.length} completed`
+                : `Show ${tasks.length} completed`
+              }
+            </button>
           )}
         </div>
       </SortableContext>

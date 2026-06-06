@@ -108,7 +108,7 @@ export default function Sidebar({ width }: { width?: number }) {
             key={p.id}
             colour={p.colour}
             label={p.label}
-            count={allTasks.filter(t => t.priority === p.id).length}
+            count={allTasks.filter(t => t.status !== 'done' && t.priority === p.id).length}
             isActive={activePriority === p.id}
             onClick={() => setActivePriority(activePriority === p.id ? null : p.id)}
           />

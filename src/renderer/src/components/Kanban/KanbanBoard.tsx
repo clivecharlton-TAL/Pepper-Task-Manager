@@ -6,7 +6,9 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners
+  pointerWithin,
+  rectIntersection,
+  type CollisionDetection
 } from '@dnd-kit/core'
 import { useState, useMemo } from 'react'
 import { useTaskStore } from '../../stores/taskStore'
@@ -31,6 +33,13 @@ function matchesSearch(task: Task, q: string, flat: LabelNode[]): boolean {
   // also check display names (handles numeric-prefix-stripped searches)
   if (task.labels.some(id => flat.find(l => l.id === id)?.name.toLowerCase().includes(s))) return true
   return false
+}
+
+// pointerWithin wins when the cursor is clearly inside a column; falls back to
+// rect intersection so drops at the very edge of a column still register.
+const kanbanCollision: CollisionDetection = (args) => {
+  const hits = pointerWithin(args)
+  return hits.length > 0 ? hits : rectIntersection(args)
 }
 
 export default function KanbanBoard() {
@@ -86,7 +95,7 @@ export default function KanbanBoard() {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={kanbanCollision}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >

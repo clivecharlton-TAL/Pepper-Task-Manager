@@ -4,6 +4,8 @@ import type { Task, LabelNode } from '../../../../shared/types'
 import ListRow from './ListRow'
 import TaskDetailModal from '../Kanban/TaskDetailModal'
 
+
+
 function flattenLabels(nodes: LabelNode[]): LabelNode[] {
   const out: LabelNode[] = []
   const walk = (arr: LabelNode[]) => arr.forEach(n => { out.push(n); walk(n.children) })
@@ -30,36 +32,58 @@ function sortByDue(a: Task, b: Task): number {
 export default function ListView() {
   const { tasks, labels, searchQuery, activeStatus, activePriority } = useTaskStore()
   const [detailTask, setDetailTask] = useState<Task | null>(null)
+  const [showDone, setShowDone] = useState(false)
 
   const flatLabels = useMemo(() => flattenLabels(labels), [labels])
 
-  const visibleTasks = useMemo(() => {
+  const { activeTasks, doneTasks } = useMemo(() => {
     const filtered = tasks.filter(t => {
-      if (activeStatus   && t.status   !== activeStatus)   return false
       if (activePriority && t.priority !== activePriority) return false
       if (searchQuery    && !matchesSearch(t, searchQuery, flatLabels)) return false
       return true
     })
-    return [...filtered].sort(sortByDue)
+
+    if (activeStatus) {
+      // When explicitly filtering by status, show whatever was requested
+      const sorted = [...filtered.filter(t => t.status === activeStatus)].sort(sortByDue)
+      return { activeTasks: sorted, doneTasks: [] }
+    }
+
+    const active = filtered.filter(t => t.status !== 'done')
+    const done   = filtered.filter(t => t.status === 'done')
+    return { activeTasks: [...active].sort(sortByDue), doneTasks: [...done].sort(sortByDue) }
   }, [tasks, searchQuery, activeStatus, activePriority, flatLabels])
+
+  const rows = showDone ? [...activeTasks, ...doneTasks] : activeTasks
 
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-3xl mx-auto px-8 py-4">
-        {visibleTasks.length === 0 ? (
+        {rows.length === 0 && doneTasks.length === 0 ? (
           <div className="flex items-center justify-center h-32">
             <p className="font-mono text-[11px] text-[#3a3a3a]">No tasks</p>
           </div>
         ) : (
-          visibleTasks.map((task, i) => (
+          rows.map((task, i) => (
             <ListRow
               key={task.id}
               task={task}
               flatLabels={flatLabels}
               onOpen={setDetailTask}
-              isLast={i === visibleTasks.length - 1}
+              isLast={i === rows.length - 1 && doneTasks.length === 0}
             />
           ))
+        )}
+
+        {/* Completed toggle */}
+        {!activeStatus && doneTasks.length > 0 && (
+          <button
+            onClick={() => setShowDone(s => !s)}
+            className="flex items-center gap-2 mt-3 px-2 py-1.5 rounded font-mono text-[10px] text-[#555555] hover:text-[#888888] hover:bg-[#2a2a2a] transition-colors"
+          >
+            <span className={`transition-transform ${showDone ? 'rotate-90' : ''}`}>▶</span>
+            {showDone ? `Hide ${doneTasks.length} completed` : `Show ${doneTasks.length} completed`}
+          </button>
         )}
       </div>
 

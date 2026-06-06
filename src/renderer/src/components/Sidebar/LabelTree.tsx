@@ -8,7 +8,7 @@ function collectIds(node: LabelNode): string[] {
 
 function countTasks(node: LabelNode, tasks: Task[]): number {
   const ids = new Set(collectIds(node))
-  return tasks.filter(t => t.labels.some(l => ids.has(l))).length
+  return tasks.filter(t => t.status !== 'done' && t.labels.some(l => ids.has(l))).length
 }
 
 const depthTextClass = (depth: number, isActive: boolean) => {
