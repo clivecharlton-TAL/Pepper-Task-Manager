@@ -27,6 +27,12 @@
         "to": "sql-wasm.wasm"
       }
     ],
+    "protocols": [
+      {
+        "name": "Pepper Tasks",
+        "schemes": ["pepper"]
+      }
+    ],
     "mac": {
       "icon": "resources/icon.icns",
       "category": "public.app-category.productivity",

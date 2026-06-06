@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, shell, ipcMain } from 'electron'
+import { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, shell, ipcMain, clipboard } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
 import { syncLabelsFromDrive } from './db'
@@ -9,6 +9,30 @@ import { registerIpcHandlers } from './ipc'
 let mainWindow: BrowserWindow | null = null
 let quickAddWindow: BrowserWindow | null = null
 let tray: Tray | null = null
+let pendingUrl: string | null = null
+
+function handleOpenUrl(url: string): void {
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname === 'task') {
+      const title = parsed.searchParams.get('title') ?? ''
+      const notes = parsed.searchParams.get('notes') ?? ''
+      toggleQuickAdd({ title, notes })
+    }
+  } catch {
+    // malformed URL — ignore
+  }
+}
+
+// Must be registered before app.whenReady() to catch launch-time URLs
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  if (!quickAddWindow) {
+    pendingUrl = url
+  } else {
+    handleOpenUrl(url)
+  }
+})
 
 function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -83,7 +107,15 @@ function createQuickAddWindow(): BrowserWindow {
   return win
 }
 
-function toggleQuickAdd(emailContext?: { id: string; subject: string }): void {
+// ─── Context types ───────────────────────────────────────────────────────────
+
+interface EmailContext { id: string; subject: string; body?: string }
+interface TextContext  { title: string; notes?: string }
+
+// Pending context: renderer pulls this on focus via quick-add:context IPC
+let pendingCtx: EmailContext | TextContext | null = null
+
+function toggleQuickAdd(ctx?: EmailContext | TextContext): void {
   if (!quickAddWindow) return
 
   if (quickAddWindow.isVisible()) {
@@ -91,9 +123,7 @@ function toggleQuickAdd(emailContext?: { id: string; subject: string }): void {
     return
   }
 
-  if (emailContext) {
-    quickAddWindow.webContents.send('set-email-context', emailContext)
-  }
+  pendingCtx = ctx ?? null
 
   // Center on screen
   const { screen } = require('electron')
@@ -161,6 +191,11 @@ app.whenReady().then(async () => {
   quickAddWindow = createQuickAddWindow()
   tray = createTray()
 
+  if (pendingUrl) {
+    handleOpenUrl(pendingUrl)
+    pendingUrl = null
+  }
+
   // Silently pick up any new Drive folders added since last launch
   const drivePath = join(homedir(), 'Library/CloudStorage/GoogleDrive/My Drive')
   syncLabelsFromDrive(drivePath).then(({ added }) => {
@@ -168,6 +203,11 @@ app.whenReady().then(async () => {
   }).catch(() => { /* Drive not mounted — ignore */ })
 
   globalShortcut.register('CommandOrControl+Shift+Space', () => toggleQuickAdd())
+
+  globalShortcut.register('CommandOrControl+Shift+E', () => {
+    const title = clipboard.readText().trim()
+    toggleQuickAdd({ title })
+  })
 
   app.on('activate', () => {
     if (!mainWindow || mainWindow.isDestroyed()) {
@@ -190,4 +230,9 @@ app.on('window-all-closed', () => {
 // Expose toggle for IPC
 ipcMain.on('quick-add:hide', () => quickAddWindow?.hide())
 ipcMain.on('main-window:show', () => { mainWindow?.show(); mainWindow?.focus() })
+ipcMain.handle('quick-add:context', () => {
+  const ctx = pendingCtx
+  pendingCtx = null
+  return ctx
+})
 

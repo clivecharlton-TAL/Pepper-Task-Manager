@@ -37,14 +37,27 @@ export default function QuickAddPanel() {
   const titlePending = useRef<number | null>(null)
   const notesPending = useRef<number | null>(null)
 
+  // Pull context from main process each time the window is focused (reshown)
+  useEffect(() => {
+    const onFocus = async () => {
+      const raw = await window.api.window.getContext()
+      if (!raw) return
+      const ctx = raw as { id?: string; subject?: string; body?: string; title?: string; notes?: string }
+      if (ctx.id && ctx.subject) {
+        setEmailCtx({ id: ctx.id, subject: ctx.subject, body: ctx.body })
+        setTitle(ctx.subject)
+        if (ctx.body) setNotes(ctx.body)
+      } else if (ctx.title) {
+        setTitle(ctx.title)
+        if (ctx.notes) setNotes(ctx.notes)
+      }
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [])
+
   useEffect(() => {
     titleRef.current?.focus()
-    const unsub = window.api.on('set-email-context', (ctx: unknown) => {
-      const c = ctx as { id: string; subject: string; body?: string }
-      setEmailCtx(c)
-      setTitle(c.subject)
-      if (c.body) setNotes(c.body)
-    })
     const onKey = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (view === 'labels') setView('form')
@@ -52,7 +65,7 @@ export default function QuickAddPanel() {
       }
     }
     window.addEventListener('keydown', onKey)
-    return () => { unsub(); window.removeEventListener('keydown', onKey) }
+    return () => { window.removeEventListener('keydown', onKey) }
   }, [view])
 
   const submit = async () => {

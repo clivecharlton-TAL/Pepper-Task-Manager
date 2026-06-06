@@ -16,6 +16,7 @@ const api = {
   window: {
     hideQuickAdd: () => ipcRenderer.send('quick-add:hide'),
     showMain: () => ipcRenderer.send('main-window:show'),
+    getContext: (): Promise<unknown> => ipcRenderer.invoke('quick-add:context'),
   },
   on: (channel: string, fn: (...args: unknown[]) => void) => {
     ipcRenderer.on(channel, (_e, ...args) => fn(...args))
