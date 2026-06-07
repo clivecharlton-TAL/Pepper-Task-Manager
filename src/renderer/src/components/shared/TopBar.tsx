@@ -115,6 +115,8 @@ export default function TopBar() {
     >
       {viewMode === 'reports' ? (
         <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Reports</span>
+      ) : viewMode === 'files' ? (
+        <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Files</span>
       ) : (activeLabel || activeStatus || activePriority || activeDue) ? (
         <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
           {[
@@ -178,6 +180,21 @@ export default function TopBar() {
             <rect x="0" y="7" width="3" height="6" rx="0.5"/>
             <rect x="5" y="4" width="3" height="9" rx="0.5"/>
             <rect x="10" y="0" width="3" height="13" rx="0.5"/>
+          </svg>
+        </button>
+        <button
+          onClick={() => { if (activeLabel) setViewMode('files') }}
+          title={activeLabel ? 'Files' : 'Select a label to browse files'}
+          className={`p-1.5 rounded transition-colors ${
+            viewMode === 'files'
+              ? 'bg-[#383838] text-[#c45d2e]'
+              : activeLabel
+                ? 'text-[#555555] hover:text-[#a0a0a0]'
+                : 'text-[#2a2a2a] cursor-not-allowed'
+          }`}
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
+            <path d="M0 3C0 2.17.67 1.5 1.5 1.5H5L6.5 3H11.5C12.33 3 13 3.67 13 4.5V10.5C13 11.33 12.33 12 11.5 12H1.5C.67 12 0 11.33 0 10.5V3Z"/>
           </svg>
         </button>
       </div>

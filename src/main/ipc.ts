@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
 import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData } from './db'
+import { listFiles, openFile, revealFile } from './files'
 import { broadcast } from './events'
 import type { CreateTaskInput, UpdateTaskInput, TaskFilters } from '../shared/types'
 
@@ -37,4 +38,8 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('reports:get', (_e, rangeDays: number) => getReportData(rangeDays))
+
+  ipcMain.handle('files:list', (_e, relativePath: string) => listFiles(relativePath))
+  ipcMain.handle('files:open', (_e, relativePath: string) => openFile(relativePath))
+  ipcMain.handle('files:reveal', (_e, relativePath: string) => { revealFile(relativePath); return null })
 }

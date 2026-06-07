@@ -83,6 +83,14 @@ export interface CompletionTimeItem {
   colour: string
 }
 
+export interface FileEntry {
+  name: string
+  relativePath: string
+  isDirectory: boolean
+  size: number | null
+  modifiedAt: string | null
+}
+
 export interface LabelBreakdownItem {
   label: string
   colour: string
