@@ -8,6 +8,34 @@ import LabelTreeView from '../QuickAdd/LabelTreeView'
 import MentionPopover from '../shared/MentionPopover'
 import { TEAM_MEMBERS } from '../../../../shared/team'
 
+// ── FY quarter helpers (FY starts 1 April) ───────────────────────────────────
+
+function currentFY(): number {
+  const now = new Date()
+  return (now.getMonth() + 1) >= 4 ? now.getFullYear() + 1 : now.getFullYear()
+}
+
+function quarterEnd(fy: number, q: 1 | 2 | 3 | 4): string {
+  if (q === 1) return `${fy - 1}-06-30`
+  if (q === 2) return `${fy - 1}-09-30`
+  if (q === 3) return `${fy - 1}-12-31`
+  return `${fy}-03-31`
+}
+
+function dateToFYQ(date: string): { fy: number; q: 1 | 2 | 3 | 4 } | null {
+  if (!date) return null
+  const [y, m] = date.split('-').map(Number)
+  if (m >= 4 && m <= 6)   return { fy: y + 1, q: 1 }
+  if (m >= 7 && m <= 9)   return { fy: y + 1, q: 2 }
+  if (m >= 10 && m <= 12) return { fy: y + 1, q: 3 }
+  return { fy: y, q: 4 }
+}
+
+const FY_RANGE = [0, 1, 2, 3].map(n => currentFY() + n)
+const TODAY_FYQ = dateToFYQ(new Date().toISOString().slice(0, 10))
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 type MentionState = { active: boolean; start: number; query: string; highlight: number; rect: DOMRect | null }
 const NO_MENTION: MentionState = { active: false, start: -1, query: '', highlight: 0, rect: null }
 function filteredMembers(query: string) {
@@ -52,11 +80,13 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [selectedLabels, setSelectedLabels] = useState<string[]>(task.labels)
   const [notesMode,      setNotesMode]      = useState<'edit' | 'preview'>('preview')
   const [showLabels,     setShowLabels]     = useState(false)
+  const [showQuarters,   setShowQuarters]   = useState(false)
   const [aiState,        setAiState]        = useState<'idle' | 'drafting' | 'error'>('idle')
   const [aiError,        setAiError]        = useState('')
   const [showKeyInput,   setShowKeyInput]   = useState(false)
   const [keyInput,       setKeyInput]       = useState('')
-  const labelPickerRef = useRef<HTMLDivElement>(null)
+  const labelPickerRef   = useRef<HTMLDivElement>(null)
+  const quarterPickerRef = useRef<HTMLDivElement>(null)
   const titleInputRef  = useRef<HTMLInputElement>(null)
   const notesRef       = useRef<HTMLTextAreaElement>(null)
   const [titleMention, setTitleMention] = useState<MentionState>(NO_MENTION)
@@ -199,6 +229,17 @@ export default function TaskDetailModal({ task, onClose }: Props) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [showLabels])
+
+  useEffect(() => {
+    if (!showQuarters) return
+    const handler = (e: MouseEvent) => {
+      if (quarterPickerRef.current && !quarterPickerRef.current.contains(e.target as Node)) {
+        setShowQuarters(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showQuarters])
 
   const labelMeta = selectedLabels.map(id => flat.find(l => l.id === id)).filter((l): l is LabelNode => !!l)
 
@@ -501,7 +542,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
             </div>
 
             {/* Due date */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] w-20 flex-shrink-0">Due</span>
               <input
                 type="date"
@@ -509,6 +550,69 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                 onChange={e => setDueDate(e.target.value)}
                 className="bg-[#1e1e1e] border border-[#333333] rounded px-2.5 py-1 font-mono text-[11px] text-[#d4d4d4] focus:outline-none focus:border-[#c45d2e]/50 [color-scheme:dark]"
               />
+
+              {/* Quarter picker */}
+              {(() => {
+                const selFYQ = dueDate ? dateToFYQ(dueDate) : null
+                const btnLabel = selFYQ
+                  ? `Q${selFYQ.q} FY${String(selFYQ.fy).slice(2)}`
+                  : 'Quarter'
+                return (
+                  <div ref={quarterPickerRef} className="relative">
+                    <button
+                      onClick={() => setShowQuarters(v => !v)}
+                      onMouseDown={e => e.stopPropagation()}
+                      className={`flex items-center gap-1 font-mono text-[11px] px-2.5 py-1 rounded border transition-colors ${
+                        selFYQ
+                          ? 'bg-[#c45d2e]/10 border-[#c45d2e]/40 text-[#c45d2e]'
+                          : 'bg-[#1e1e1e] border-[#333333] text-[#888888] hover:border-[#444444] hover:text-[#b0b0b0]'
+                      }`}
+                    >
+                      {btnLabel}
+                      <svg width="6" height="4" viewBox="0 0 6 4" fill="currentColor"
+                        className={`flex-shrink-0 transition-transform ${showQuarters ? 'rotate-180' : ''}`}>
+                        <path d="M0 0.5L3 3.5L6 0.5H0Z"/>
+                      </svg>
+                    </button>
+
+                    {showQuarters && (
+                      <div
+                        className="absolute left-0 top-full mt-1 bg-[#1e1e1e] border border-[#383838] rounded-xl shadow-2xl z-20 p-2.5"
+                        onMouseDown={e => e.stopPropagation()}
+                      >
+                        {FY_RANGE.map(fy => (
+                          <div key={fy} className="flex items-center gap-1 mb-1 last:mb-0">
+                            <span className="font-mono text-[10px] text-[#4a4a4a] w-8 flex-shrink-0 text-right pr-1">
+                              FY{String(fy).slice(2)}
+                            </span>
+                            {([1, 2, 3, 4] as const).map(q => {
+                              const end = quarterEnd(fy, q)
+                              const isSelected = dueDate === end
+                              const isCurrent  = TODAY_FYQ?.fy === fy && TODAY_FYQ?.q === q
+                              return (
+                                <button
+                                  key={q}
+                                  onClick={() => { setDueDate(end); setShowQuarters(false) }}
+                                  className={`font-mono text-[10px] w-8 py-1 rounded transition-all ${
+                                    isSelected
+                                      ? 'bg-[#c45d2e]/20 text-[#c45d2e] border border-[#c45d2e]/50'
+                                      : isCurrent
+                                        ? 'text-[#d4d4d4] border border-[#555555] bg-[#2a2a2a] hover:border-[#c45d2e]/40 hover:text-[#c45d2e]'
+                                        : 'text-[#666666] border border-transparent hover:bg-[#2a2a2a] hover:text-[#c0c0c0]'
+                                  }`}
+                                >
+                                  Q{q}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
               {dueDate && (
                 <button
                   onClick={() => setDueDate('')}
