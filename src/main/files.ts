@@ -40,9 +40,11 @@ export function listFiles(relativePath: string): FileEntry[] | null {
     })
   }
 
+  const numPrefix = (name: string) => { const m = name.match(/^(\d+)/); return m ? parseInt(m[1], 10) : Infinity }
   return result.sort((a, b) => {
     if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
-    return a.name.localeCompare(b.name)
+    const diff = numPrefix(a.name) - numPrefix(b.name)
+    return diff !== 0 ? diff : a.name.localeCompare(b.name)
   })
 }
 
