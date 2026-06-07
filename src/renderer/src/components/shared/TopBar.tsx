@@ -1,8 +1,96 @@
-import { useRef, useEffect } from 'react'
-import { useTaskStore } from '../../stores/taskStore'
+import { useRef, useEffect, useState } from 'react'
+import { useTaskStore, type ListSort, type ListGroup } from '../../stores/taskStore'
+
+const SORT_OPTIONS: { value: ListSort; label: string }[] = [
+  { value: 'due',      label: 'Due date'  },
+  { value: 'priority', label: 'Priority'  },
+  { value: 'created',  label: 'Created'   },
+  { value: 'title',    label: 'Title'     },
+]
+
+const GROUP_OPTIONS: { value: ListGroup; label: string }[] = [
+  { value: 'none',     label: 'None'      },
+  { value: 'priority', label: 'Priority'  },
+  { value: 'status',   label: 'Status'    },
+  { value: 'label',    label: 'Label'     },
+]
+
+function ListControl<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (v: T) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const current = options.find(o => o.value === value)
+
+  return (
+    <div ref={ref} className="relative" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <button
+        onMouseDown={e => e.stopPropagation()}
+        onClick={() => setOpen(o => !o)}
+        className="no-drag flex items-center gap-1.5 px-2 py-1 bg-[#2a2a2a] border border-[#333333] rounded font-mono text-[10px] hover:border-[#444444] transition-colors"
+      >
+        <span className="text-[#444444]">{label}</span>
+        <span className="text-[#888888]">{current?.label}</span>
+        <svg
+          width="6" height="4" viewBox="0 0 6 4" fill="currentColor"
+          className={`text-[#555555] transition-transform flex-shrink-0 ${open ? 'rotate-180' : ''}`}
+        >
+          <path d="M0 0.5L3 3.5L6 0.5H0Z"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-1 bg-[#252525] border border-[#383838] rounded shadow-xl z-50"
+          style={{ minWidth: '110px' }}
+          onMouseDown={e => e.stopPropagation()}
+        >
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={`w-full text-left px-3 py-1.5 font-mono text-[10px] flex items-center gap-2 transition-colors ${
+                value === opt.value
+                  ? 'text-[#c45d2e]'
+                  : 'text-[#888888] hover:text-[#c0c0c0] hover:bg-[#2a2a2a]'
+              }`}
+            >
+              <span className="w-2.5">{value === opt.value ? '✓' : ''}</span>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function TopBar() {
-  const { activeLabel, activeStatus, activePriority, activeDue, searchQuery, setSearchQuery, viewMode, setViewMode } = useTaskStore()
+  const {
+    activeLabel, activeStatus, activePriority, activeDue,
+    searchQuery, setSearchQuery,
+    viewMode, setViewMode,
+    listSort, setListSort,
+    listGroup, setListGroup,
+  } = useTaskStore()
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -44,6 +132,14 @@ export default function TopBar() {
       )}
 
       <div className="flex-1" />
+
+      {/* List-only: sort + group controls */}
+      {viewMode === 'list' && (
+        <div className="flex items-center gap-2">
+          <ListControl label="Sort" options={SORT_OPTIONS} value={listSort} onChange={setListSort} />
+          <ListControl label="Group" options={GROUP_OPTIONS} value={listGroup} onChange={setListGroup} />
+        </div>
+      )}
 
       {/* View toggle */}
       <div

@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import type { Task, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, TaskStatus, TaskPriority, DomainEvent } from '../../../shared/types'
 
 export type DueFilter = 'overdue' | 'today' | 'this_week'
+export type ListSort  = 'due' | 'priority' | 'created' | 'title'
+export type ListGroup = 'none' | 'priority' | 'status' | 'label'
 
 interface TaskStore {
   tasks: Task[]
@@ -14,6 +16,8 @@ interface TaskStore {
   activeDue: DueFilter | null
   searchQuery: string
   viewMode: 'kanban' | 'list'
+  listSort: ListSort
+  listGroup: ListGroup
 
   init: () => () => void
   loadTasks: () => Promise<void>
@@ -29,6 +33,8 @@ interface TaskStore {
   setActiveDue: (due: DueFilter | null) => void
   setSearchQuery: (q: string) => void
   setViewMode: (mode: 'kanban' | 'list') => void
+  setListSort: (sort: ListSort) => void
+  setListGroup: (group: ListGroup) => void
 }
 
 function applyEvent(state: Pick<TaskStore, 'tasks' | 'allTasks' | 'activeLabel'>, event: DomainEvent) {
@@ -79,6 +85,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   activeDue: null,
   searchQuery: '',
   viewMode: 'kanban',
+  listSort: 'due',
+  listGroup: 'none',
 
   init: () => {
     const unsubTasks = window.api.on('domain-event', (raw: unknown) => {
@@ -141,4 +149,6 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   setSearchQuery: (q) => set({ searchQuery: q }),
   setViewMode: (mode) => set({ viewMode: mode }),
+  setListSort: (sort) => set({ listSort: sort }),
+  setListGroup: (group) => set({ listGroup: group }),
 }))

@@ -1,10 +1,36 @@
 import { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, shell, ipcMain, clipboard } from 'electron'
+import { createServer } from 'http'
 import { join } from 'path'
 import { homedir } from 'os'
-import { syncLabelsFromDrive } from './db'
+import { syncLabelsFromDrive, createTask } from './db'
 import { broadcast } from './events'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
+
+const LOCAL_API_PORT = 47832
+
+function startLocalApi(): void {
+  const server = createServer((req, res) => {
+    if (req.method !== 'POST' || req.url !== '/tasks') {
+      res.writeHead(404).end()
+      return
+    }
+    let body = ''
+    req.on('data', chunk => { body += chunk })
+    req.on('end', async () => {
+      try {
+        const input = JSON.parse(body)
+        const task = await createTask(input)
+        broadcast({ type: 'task:created', task })
+        res.writeHead(201, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify(task))
+      } catch (e) {
+        res.writeHead(400).end(String(e))
+      }
+    })
+  })
+  server.listen(LOCAL_API_PORT, '127.0.0.1')
+}
 
 let mainWindow: BrowserWindow | null = null
 let quickAddWindow: BrowserWindow | null = null
@@ -172,6 +198,7 @@ function createTray(): Tray {
 const TRAY_ICON_BASE64 = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAsQAAALEBxi1JjQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAF8SURBVEiJtdW/axRBGMbxj3f4IwSDQlLYpA0YK5V0gp0iJBbXqJUQA9G/wVKIV1kEUqWxESyTJk0QiZhoa6qAYEAOFcT88jhUzFnsHO5d9tbdc++BF4adl+c7874zO/Sm19jFW8yg1KNPV71CMxaLRQPgNO7ie4Bc7wcEHgbA834BLgXA+36Y38ebADgU9Wa2SMBX7c1u4ks8oZfjVcZ4GD9NmG99u4DjPfi7h7UwPoUqPoR4jJNhbgUPoIJPISoZAK07MJeSUw0561Dzt361DICDWP4LTGI0xBRexubr0NDepPMp5sOONjUtfpew02EynQK4nGGHcX2Ddx3UH7iSkFzGRs4dbJZFN/Fih9EtnBA1fl9UtmddwGlahds5V5Un7sAZ7PXBfA9nS6KHYyHn1rPoidgBGsbnAle/jaFO4lX8KsC8IeU4T/8npI6baXWDa6La5TX/iIl/mbc0gnn8zLjqRxhMMjqWATSJGxjDOQyInsctLGNJ9ANM1B9ebd9s4LOUyQAAAABJRU5ErkJggg==`
 
 app.whenReady().then(async () => {
+  startLocalApi()
   registerIpcHandlers()
 
   mainWindow = createMainWindow()
