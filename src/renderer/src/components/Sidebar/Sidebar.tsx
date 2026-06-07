@@ -178,8 +178,10 @@ export default function Sidebar({ width }: { width?: number }) {
     activeStatus, setActiveStatus,
     activePriority, setActivePriority,
     activeDue, setActiveDue,
-    allTasks
+    allTasks, labels
   } = useTaskStore()
+
+  const crossCuttingLabels = labels.filter(l => l.id.startsWith('+'))
 
   const clearAll = () => {
     setActiveLabel(null)
@@ -271,6 +273,44 @@ export default function Sidebar({ width }: { width?: number }) {
           />
         ))}
       </div>
+
+      <div className="h-px bg-[#2e2e2e] mx-3 mb-2 flex-shrink-0" />
+
+      {/* Cross-cutting tags */}
+      {crossCuttingLabels.length > 0 && (
+        <div className="px-2 pb-2 flex-shrink-0">
+          <div className="px-3 py-1.5 mb-1.5">
+            <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Tags</span>
+          </div>
+          <div className="px-3 flex flex-wrap gap-1.5">
+            {crossCuttingLabels.map(l => {
+              const count = allTasks.filter(t => t.status !== 'done' && t.labels.includes(l.id)).length
+              const isActive = activeLabel === l.id
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => setActiveLabel(isActive ? null : l.id)}
+                  className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded border transition-all"
+                  style={isActive
+                    ? { backgroundColor: l.colour + '22', borderColor: l.colour + '66', color: l.colour }
+                    : { backgroundColor: 'transparent', borderColor: '#383838', color: '#888888' }
+                  }
+                >
+                  {l.name}
+                  {count > 0 && (
+                    <span
+                      className="font-mono text-[9px] ml-0.5"
+                      style={{ color: isActive ? l.colour : '#555555' }}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="h-px bg-[#2e2e2e] mx-3 mb-2 flex-shrink-0" />
 

@@ -66,6 +66,7 @@ function migrate(db: Database): void {
   `)
 
   seedLabels(db)
+  seedCrossCuttingLabels(db)
   save()
 }
 
@@ -181,6 +182,20 @@ function seedLabels(db: Database): void {
 
   const ext = '90.External-Advisory-Network'
   insert(`${ext}/00.Audit-Reports`, '00.Audit-Reports', ext, '#8E8E93', 0)
+}
+
+function seedCrossCuttingLabels(db: Database): void {
+  const CROSS_CUTTING: Array<[string, string, number]> = [
+    ['+Research', '+Research', -50],
+    ['+Review',   '+Review',   -40],
+    ['+Blocked',  '+Blocked',  -30],
+    ['+Waiting',  '+Waiting',  -20],
+    ['+Urgent',   '+Urgent',   -10],
+  ]
+  for (const [id, name, order] of CROSS_CUTTING) {
+    run(db, 'INSERT OR IGNORE INTO labels (id, name, parent_id, colour, sort_order) VALUES (?, ?, ?, ?, ?)',
+      [id, name, null, '#5AC8FA', order])
+  }
 }
 
 // ─── Labels ────────────────────────────────────────────────────────────────

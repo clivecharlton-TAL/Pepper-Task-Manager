@@ -82,9 +82,10 @@ function LabelRow({ node, depth, tasks }: { node: LabelNode; depth: number; task
 export default function LabelTree() {
   const { labels, allTasks } = useTaskStore()
   if (!labels.length) return <div className="font-mono text-[11px] text-[#6b7280] px-3 py-2">Loading…</div>
+  const structural = labels.filter(n => !n.id.startsWith('+'))
   return (
     <div className="space-y-0.5">
-      {labels.map(node => <LabelRow key={node.id} node={node} depth={0} tasks={allTasks} />)}
+      {structural.map(node => <LabelRow key={node.id} node={node} depth={0} tasks={allTasks} />)}
     </div>
   )
 }
