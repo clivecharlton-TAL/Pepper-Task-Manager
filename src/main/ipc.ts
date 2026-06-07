@@ -1,8 +1,8 @@
 import { ipcMain } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
-import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData } from './db'
-import { listFiles, openFile, revealFile } from './files'
+import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel } from './db'
+import { listFiles, openFile, revealFile, createFolder } from './files'
 import { broadcast } from './events'
 import type { CreateTaskInput, UpdateTaskInput, TaskFilters } from '../shared/types'
 
@@ -42,4 +42,15 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('files:list', (_e, relativePath: string) => listFiles(relativePath))
   ipcMain.handle('files:open', (_e, relativePath: string) => openFile(relativePath))
   ipcMain.handle('files:reveal', (_e, relativePath: string) => { revealFile(relativePath); return null })
+  ipcMain.handle('files:mkdir', async (_e, relativePath: string) => {
+    const result = createFolder(relativePath)
+    if (result.created) {
+      const parts = relativePath.split('/')
+      const name = parts[parts.length - 1]
+      const parentId = parts.length > 1 ? parts.slice(0, -1).join('/') : null
+      await createLabel(relativePath, name, parentId)
+      broadcast({ type: 'labels:changed', added: 1 })
+    }
+    return result
+  })
 }

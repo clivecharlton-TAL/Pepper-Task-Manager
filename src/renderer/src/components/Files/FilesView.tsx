@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { format, parseISO } from 'date-fns'
 import type { FileEntry } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
@@ -99,11 +99,14 @@ function Breadcrumb({ path, onNavigate }: { path: string; onNavigate: (p: string
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export default function FilesView() {
-  const { activeLabel } = useTaskStore()
+  const { activeLabel, loadLabels } = useTaskStore()
   const [currentPath, setCurrentPath] = useState(activeLabel ?? '')
   const [entries, setEntries] = useState<FileEntry[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [missing, setMissing] = useState(false)
+  const [creatingFolder, setCreatingFolder] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
+  const newFolderInputRef = useRef<HTMLInputElement>(null)
 
   // Navigate to the new label's folder when the selection changes
   useEffect(() => {
@@ -138,6 +141,32 @@ export default function FilesView() {
     await window.api.files.reveal(entry.relativePath)
   }
 
+  const startCreatingFolder = () => {
+    setNewFolderName('')
+    setCreatingFolder(true)
+    setTimeout(() => newFolderInputRef.current?.focus(), 0)
+  }
+
+  const cancelCreatingFolder = () => {
+    setCreatingFolder(false)
+    setNewFolderName('')
+  }
+
+  const confirmNewFolder = async () => {
+    const name = newFolderName.trim()
+    if (!name) { cancelCreatingFolder(); return }
+    const relativePath = currentPath ? `${currentPath}/${name}` : name
+    const result = await window.api.files.mkdir(relativePath)
+    cancelCreatingFolder()
+    if (result.created) {
+      // Refresh file list — the labels:changed event from main handles sidebar
+      const updated = await window.api.files.list(currentPath)
+      if (updated !== null) setEntries(updated)
+      // Also re-sync labels in the store in case the event hasn't fired yet
+      await loadLabels()
+    }
+  }
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-3xl mx-auto px-8 py-4">
@@ -159,6 +188,18 @@ export default function FilesView() {
             </button>
           )}
           <Breadcrumb path={currentPath} onNavigate={setCurrentPath} />
+          <div className="flex-1" />
+          <button
+            onClick={startCreatingFolder}
+            title="New folder"
+            className="flex items-center gap-1.5 px-2 py-1 font-mono text-[10px] text-[#555555] hover:text-[#f0f0f0] border border-[#333333] hover:border-[#444444] rounded transition-colors flex-shrink-0"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+              <rect x="4" y="0" width="2" height="10" rx="1"/>
+              <rect x="0" y="4" width="10" height="2" rx="1"/>
+            </svg>
+            New Folder
+          </button>
         </div>
 
         {/* Loading */}
@@ -177,14 +218,14 @@ export default function FilesView() {
         )}
 
         {/* Empty */}
-        {!loading && !missing && entries?.length === 0 && (
+        {!loading && !missing && entries?.length === 0 && !creatingFolder && (
           <div className="flex items-center justify-center h-32">
             <p className="font-mono text-[11px] text-[#3a3a3a]">Empty folder</p>
           </div>
         )}
 
         {/* File list */}
-        {!loading && !missing && entries && entries.length > 0 && (
+        {!loading && !missing && (entries !== null) && (entries.length > 0 || creatingFolder) && (
           <div>
             {/* Column header */}
             <div className="flex items-center gap-3 px-3 mb-1">
@@ -195,7 +236,32 @@ export default function FilesView() {
               <div className="w-6 flex-shrink-0" />
             </div>
 
-            {entries.map((entry, i) => (
+            {/* Inline new-folder row */}
+            {creatingFolder && (
+              <div>
+                <div className="flex items-center gap-3 py-2.5 px-3 -mx-3 rounded-lg bg-[#242424]">
+                  <div className="w-4 flex items-center justify-center flex-shrink-0">
+                    <FolderIcon />
+                  </div>
+                  <input
+                    ref={newFolderInputRef}
+                    value={newFolderName}
+                    onChange={e => setNewFolderName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); confirmNewFolder() }
+                      if (e.key === 'Escape') cancelCreatingFolder()
+                      e.stopPropagation()
+                    }}
+                    onBlur={cancelCreatingFolder}
+                    placeholder="Folder name"
+                    className="flex-1 bg-transparent font-mono text-[12px] text-[#f0f0f0] placeholder-[#3a3a3a] focus:outline-none border-b border-[#c45d2e]/60"
+                  />
+                </div>
+                {entries && entries.length > 0 && <div className="h-px bg-[#272727]" />}
+              </div>
+            )}
+
+            {entries && entries.map((entry, i) => (
               <div key={entry.relativePath} className="group">
                 <div
                   className="flex items-center gap-3 py-2.5 px-3 -mx-3 cursor-pointer rounded-lg hover:bg-[#242424] transition-colors"

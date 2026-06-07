@@ -17,9 +17,10 @@ const api = {
     get: (rangeDays: number): Promise<ReportData> => ipcRenderer.invoke('reports:get', rangeDays)
   },
   files: {
-    list:   (relativePath: string): Promise<FileEntry[] | null> => ipcRenderer.invoke('files:list', relativePath),
-    open:   (relativePath: string): Promise<string>             => ipcRenderer.invoke('files:open', relativePath),
-    reveal: (relativePath: string): Promise<void>               => ipcRenderer.invoke('files:reveal', relativePath),
+    list:   (relativePath: string): Promise<FileEntry[] | null>    => ipcRenderer.invoke('files:list', relativePath),
+    open:   (relativePath: string): Promise<string>                => ipcRenderer.invoke('files:open', relativePath),
+    reveal: (relativePath: string): Promise<void>                  => ipcRenderer.invoke('files:reveal', relativePath),
+    mkdir:  (relativePath: string): Promise<{ created: boolean }>  => ipcRenderer.invoke('files:mkdir', relativePath),
   },
   window: {
     hideQuickAdd: () => ipcRenderer.send('quick-add:hide'),

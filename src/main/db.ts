@@ -218,6 +218,21 @@ const ROOT_COLOURS: Record<string, string> = {
   '999.Archive':                 '#8E8E93',
 }
 
+export async function createLabel(id: string, name: string, parentId: string | null): Promise<void> {
+  const d = await getDb()
+  let colour = '#8E8E93'
+  if (parentId) {
+    const parent = get<{ colour: string }>(d, 'SELECT colour FROM labels WHERE id = ?', [parentId])
+    if (parent) colour = parent.colour
+  } else {
+    colour = ROOT_COLOURS[id] ?? '#8E8E93'
+  }
+  const sortOrder = parseInt(name, 10) || 0
+  run(d, 'INSERT OR IGNORE INTO labels (id, name, parent_id, colour, sort_order) VALUES (?, ?, ?, ?, ?)',
+    [id, name, parentId, colour, sortOrder])
+  save()
+}
+
 export async function syncLabelsFromDrive(drivePath: string): Promise<{ added: number }> {
   if (!existsSync(drivePath)) return { added: 0 }
   const d = await getDb()

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from 'fs'
+import { existsSync, readdirSync, statSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { shell } from 'electron'
@@ -52,4 +52,15 @@ export async function openFile(relativePath: string): Promise<string> {
 
 export function revealFile(relativePath: string): void {
   shell.showItemInFolder(join(DRIVE_ROOT, relativePath))
+}
+
+export function createFolder(relativePath: string): { created: boolean } {
+  const absPath = join(DRIVE_ROOT, relativePath)
+  if (existsSync(absPath)) return { created: false }
+  try {
+    mkdirSync(absPath)
+    return { created: true }
+  } catch {
+    return { created: false }
+  }
 }
