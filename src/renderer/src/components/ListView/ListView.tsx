@@ -127,7 +127,8 @@ export default function ListView() {
   // --- grouped mode ---
   const groups = useMemo<Group[] | null>(() => {
     if (listGroup === 'none') return null
-    const scopedTasks = activeStatus ? filtered.filter(t => t.status === activeStatus) : filtered
+    const scopedTasks = (activeStatus ? filtered.filter(t => t.status === activeStatus) : filtered)
+      .filter(t => t.status !== 'done')
     const computed = computeGroups(scopedTasks, listGroup, flatLabels)
     return computed.map(g => ({ ...g, tasks: [...g.tasks].sort(cmp) }))
   }, [listGroup, filtered, activeStatus, flatLabels, cmp])
