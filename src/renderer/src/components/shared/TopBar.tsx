@@ -117,6 +117,8 @@ export default function TopBar() {
         <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Reports</span>
       ) : viewMode === 'files' ? (
         <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Files</span>
+      ) : viewMode === 'calendar' ? (
+        <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Calendar</span>
       ) : (activeLabel || activeStatus || activePriority || activeDue) ? (
         <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
           {[
@@ -195,6 +197,17 @@ export default function TopBar() {
         >
           <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
             <path d="M0 3C0 2.17.67 1.5 1.5 1.5H5L6.5 3H11.5C12.33 3 13 3.67 13 4.5V10.5C13 11.33 12.33 12 11.5 12H1.5C.67 12 0 11.33 0 10.5V3Z"/>
+          </svg>
+        </button>
+        <button
+          onClick={() => setViewMode('calendar')}
+          title="Calendar"
+          className={`p-1.5 rounded transition-colors ${viewMode === 'calendar' ? 'bg-[#383838] text-[#c45d2e]' : 'text-[#555555] hover:text-[#a0a0a0]'}`}
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
+            <rect x="0" y="2.5" width="13" height="10.5" rx="1.5"/>
+            <rect x="3" y="0" width="1.5" height="4" rx="0.75"/>
+            <rect x="8.5" y="0" width="1.5" height="4" rx="0.75"/>
           </svg>
         </button>
       </div>

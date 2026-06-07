@@ -4,6 +4,7 @@ import KanbanBoard from './Kanban/KanbanBoard'
 import ListView from './ListView/ListView'
 import ReportsView from './Reports/ReportsView'
 import FilesView from './Files/FilesView'
+import CalendarView from './Calendar/CalendarView'
 import TopBar from './shared/TopBar'
 import { useTaskStore } from '../stores/taskStore'
 
@@ -50,7 +51,11 @@ export default function MainWindow() {
 
       <div className="flex flex-col flex-1 min-w-0">
         <TopBar />
-        {viewMode === 'kanban' ? <KanbanBoard /> : viewMode === 'list' ? <ListView /> : viewMode === 'reports' ? <ReportsView /> : <FilesView />}
+        {viewMode === 'kanban'   ? <KanbanBoard />   :
+         viewMode === 'list'     ? <ListView />      :
+         viewMode === 'reports'  ? <ReportsView />   :
+         viewMode === 'files'    ? <FilesView />     :
+                                   <CalendarView />}
       </div>
     </div>
   )
