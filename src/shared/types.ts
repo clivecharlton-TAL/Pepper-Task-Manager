@@ -69,3 +69,42 @@ export type DomainEvent =
   | { type: 'task:updated'; task: Task }
   | { type: 'task:deleted'; id: string }
   | { type: 'labels:changed'; added: number }
+
+export interface VelocityPoint {
+  week: string
+  created: number
+  completed: number
+}
+
+export interface CompletionTimeItem {
+  label: string
+  avgDays: number
+  count: number
+  colour: string
+}
+
+export interface LabelBreakdownItem {
+  label: string
+  colour: string
+  total: number
+  done: number
+  inProgress: number
+  todo: number
+  backlog: number
+}
+
+export interface ReportData {
+  velocity: VelocityPoint[]
+  completionTime: {
+    byPriority: CompletionTimeItem[]
+    byLabel: CompletionTimeItem[]
+  }
+  backlogHealth: {
+    byStatus: { status: string; count: number }[]
+    overdueCount: number
+    avgAgeDays: number
+    noDueDateCount: number
+    totalOpen: number
+  }
+  labelBreakdown: LabelBreakdownItem[]
+}

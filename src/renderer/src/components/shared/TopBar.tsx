@@ -113,7 +113,9 @@ export default function TopBar() {
       className="flex items-center gap-3 px-4 border-b border-[#333333] flex-shrink-0 drag-region"
       style={{ paddingTop: '14px', paddingBottom: '10px' }}
     >
-      {(activeLabel || activeStatus || activePriority || activeDue) ? (
+      {viewMode === 'reports' ? (
+        <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Reports</span>
+      ) : (activeLabel || activeStatus || activePriority || activeDue) ? (
         <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
           {[
             activeStatus   && activeStatus.replace('_', ' '),
@@ -165,6 +167,17 @@ export default function TopBar() {
             <rect x="0" y="0" width="13" height="2" rx="1"/>
             <rect x="0" y="5.5" width="13" height="2" rx="1"/>
             <rect x="0" y="11" width="13" height="2" rx="1"/>
+          </svg>
+        </button>
+        <button
+          onClick={() => setViewMode('reports')}
+          title="Reports"
+          className={`p-1.5 rounded transition-colors ${viewMode === 'reports' ? 'bg-[#383838] text-[#c45d2e]' : 'text-[#555555] hover:text-[#a0a0a0]'}`}
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
+            <rect x="0" y="7" width="3" height="6" rx="0.5"/>
+            <rect x="5" y="4" width="3" height="9" rx="0.5"/>
+            <rect x="10" y="0" width="3" height="13" rx="0.5"/>
           </svg>
         </button>
       </div>

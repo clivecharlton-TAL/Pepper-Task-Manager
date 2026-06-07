@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode } from '../shared/types'
+import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData } from '../shared/types'
 
 const api = {
   tasks: {
@@ -12,6 +12,9 @@ const api = {
   labels: {
     tree: (): Promise<LabelNode[]> => ipcRenderer.invoke('labels:tree'),
     syncDrive: (): Promise<{ added: number }> => ipcRenderer.invoke('labels:sync-drive')
+  },
+  reports: {
+    get: (rangeDays: number): Promise<ReportData> => ipcRenderer.invoke('reports:get', rangeDays)
   },
   window: {
     hideQuickAdd: () => ipcRenderer.send('quick-add:hide'),

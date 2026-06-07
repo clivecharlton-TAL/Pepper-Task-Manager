@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
-import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive } from './db'
+import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData } from './db'
 import { broadcast } from './events'
 import type { CreateTaskInput, UpdateTaskInput, TaskFilters } from '../shared/types'
 
@@ -35,4 +35,6 @@ export function registerIpcHandlers(): void {
     if (result.added > 0) broadcast({ type: 'labels:changed', added: result.added })
     return result
   })
+
+  ipcMain.handle('reports:get', (_e, rangeDays: number) => getReportData(rangeDays))
 }

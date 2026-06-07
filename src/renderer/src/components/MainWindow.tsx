@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import Sidebar from './Sidebar/Sidebar'
 import KanbanBoard from './Kanban/KanbanBoard'
 import ListView from './ListView/ListView'
+import ReportsView from './Reports/ReportsView'
 import TopBar from './shared/TopBar'
 import { useTaskStore } from '../stores/taskStore'
 
@@ -48,7 +49,7 @@ export default function MainWindow() {
 
       <div className="flex flex-col flex-1 min-w-0">
         <TopBar />
-        {viewMode === 'kanban' ? <KanbanBoard /> : <ListView />}
+        {viewMode === 'kanban' ? <KanbanBoard /> : viewMode === 'list' ? <ListView /> : <ReportsView />}
       </div>
     </div>
   )

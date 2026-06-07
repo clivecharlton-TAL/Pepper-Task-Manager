@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import initSqlJs, { Database } from 'sql.js'
-import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters } from '../shared/types'
+import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem } from '../shared/types'
 
 const DB_PATH = join(app.getPath('userData'), 'tasks.db')
 
@@ -53,6 +53,15 @@ function migrate(db: Database): void {
       linked_email_subject TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS task_events (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      priority TEXT NOT NULL DEFAULT 'medium',
+      labels TEXT NOT NULL DEFAULT '[]',
+      occurred_at TEXT NOT NULL
     );
   `)
 
@@ -288,6 +297,16 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
      task.linked_email_id, task.linked_email_subject,
      task.created_at, task.updated_at]
   )
+  run(d,
+    'INSERT INTO task_events (id,task_id,event_type,priority,labels,occurred_at) VALUES (?,?,?,?,?,?)',
+    [uuidv4(), task.id, 'task_created', task.priority, JSON.stringify(task.labels), now]
+  )
+  if (task.status === 'done') {
+    run(d,
+      'INSERT INTO task_events (id,task_id,event_type,priority,labels,occurred_at) VALUES (?,?,?,?,?,?)',
+      [uuidv4(), task.id, 'task_completed', task.priority, JSON.stringify(task.labels), now]
+    )
+  }
   save()
   return task
 }
@@ -311,12 +330,26 @@ export async function updateTask(input: UpdateTaskInput): Promise<Task | null> {
      updated.linked_email_id, updated.linked_email_subject,
      updated.updated_at, updated.id]
   )
+  if (current.status !== 'done' && updated.status === 'done') {
+    run(d,
+      'INSERT INTO task_events (id,task_id,event_type,priority,labels,occurred_at) VALUES (?,?,?,?,?,?)',
+      [uuidv4(), updated.id, 'task_completed', updated.priority, JSON.stringify(updated.labels), updated.updated_at]
+    )
+  }
   save()
   return updated
 }
 
 export async function deleteTask(id: string): Promise<boolean> {
   const d = await getDb()
+  const row = get<Record<string, unknown>>(d, 'SELECT * FROM tasks WHERE id = ?', [id])
+  if (row) {
+    const task = parseTask(row)
+    run(d,
+      'INSERT INTO task_events (id,task_id,event_type,priority,labels,occurred_at) VALUES (?,?,?,?,?,?)',
+      [uuidv4(), id, 'task_deleted', task.priority, JSON.stringify(task.labels), new Date().toISOString()]
+    )
+  }
   run(d, 'DELETE FROM tasks WHERE id = ?', [id])
   save()
   return true
@@ -326,4 +359,99 @@ export async function getTask(id: string): Promise<Task | null> {
   const d = await getDb()
   const row = get<Record<string, unknown>>(d, 'SELECT * FROM tasks WHERE id = ?', [id])
   return row ? parseTask(row) : null
+}
+
+export async function getReportData(rangeDays: number): Promise<ReportData> {
+  const d = await getDb()
+  const since = rangeDays > 0
+    ? new Date(Date.now() - rangeDays * 86400000).toISOString()
+    : '2000-01-01T00:00:00.000Z'
+
+  // ── Velocity ────────────────────────────────────────────────────────────
+  const createdVel = all<{ wk: string; n: number }>(d,
+    `SELECT strftime('%Y-W%W', occurred_at) as wk, COUNT(*) as n
+     FROM task_events WHERE event_type='task_created' AND occurred_at >= ?
+     GROUP BY wk ORDER BY wk`, [since])
+  const completedVel = all<{ wk: string; n: number }>(d,
+    `SELECT strftime('%Y-W%W', occurred_at) as wk, COUNT(*) as n
+     FROM task_events WHERE event_type='task_completed' AND occurred_at >= ?
+     GROUP BY wk ORDER BY wk`, [since])
+  const weekKeys = new Set([...createdVel.map(r => r.wk), ...completedVel.map(r => r.wk)])
+  const velocity: VelocityPoint[] = [...weekKeys].sort().map(wk => ({
+    week: wk,
+    created:   createdVel.find(r => r.wk === wk)?.n ?? 0,
+    completed: completedVel.find(r => r.wk === wk)?.n ?? 0,
+  }))
+
+  // ── Completion time ──────────────────────────────────────────────────────
+  const ctRows = all<{ task_id: string; priority: string; labels: string; days: number }>(d,
+    `SELECT c.task_id, c.priority, c.labels,
+       CAST(julianday(x.occurred_at) - julianday(c.occurred_at) AS REAL) as days
+     FROM task_events c
+     JOIN (
+       SELECT task_id, MIN(occurred_at) as occurred_at
+       FROM task_events WHERE event_type='task_completed'
+       GROUP BY task_id
+     ) x ON c.task_id = x.task_id
+     WHERE c.event_type='task_created'
+       AND julianday(x.occurred_at) >= julianday(c.occurred_at)
+       AND x.occurred_at >= ?`, [since])
+
+  const priMap: Record<string, { sum: number; count: number }> = {}
+  const lblMap: Record<string, { sum: number; count: number }> = {}
+  for (const r of ctRows) {
+    if (!priMap[r.priority]) priMap[r.priority] = { sum: 0, count: 0 }
+    priMap[r.priority].sum += r.days; priMap[r.priority].count++
+    const labels: string[] = JSON.parse(r.labels)
+    const top = labels[0]?.split('/')[0] ?? 'Unlabeled'
+    if (!lblMap[top]) lblMap[top] = { sum: 0, count: 0 }
+    lblMap[top].sum += r.days; lblMap[top].count++
+  }
+
+  const labelColourRows = all<{ id: string; colour: string }>(d,
+    'SELECT id, colour FROM labels WHERE parent_id IS NULL')
+  const colourMap: Record<string, string> = {}
+  for (const l of labelColourRows) colourMap[l.id] = l.colour
+
+  const PRIORITY_COLOUR: Record<string, string> = { high: '#FC2847', medium: '#FFC400', low: '#30D158' }
+  const byPriority: CompletionTimeItem[] = Object.entries(priMap)
+    .map(([p, { sum, count }]) => ({ label: p, avgDays: Math.round((sum / count) * 10) / 10, count, colour: PRIORITY_COLOUR[p] ?? '#8E8E93' }))
+    .sort((a, b) => ['high', 'medium', 'low'].indexOf(a.label) - ['high', 'medium', 'low'].indexOf(b.label))
+  const byLabel: CompletionTimeItem[] = Object.entries(lblMap)
+    .map(([l, { sum, count }]) => ({ label: l, avgDays: Math.round((sum / count) * 10) / 10, count, colour: colourMap[l] ?? '#8E8E93' }))
+    .sort((a, b) => a.avgDays - b.avgDays).slice(0, 8)
+
+  // ── Backlog health ───────────────────────────────────────────────────────
+  const statusRows = all<{ status: string; n: number }>(d, 'SELECT status, COUNT(*) as n FROM tasks GROUP BY status')
+  const overdueRow  = get<{ n: number }>(d, `SELECT COUNT(*) as n FROM tasks WHERE due_date < date('now') AND status != 'done'`)
+  const avgAgeRow   = get<{ avg: number | null }>(d, `SELECT AVG(julianday('now') - julianday(created_at)) as avg FROM tasks WHERE status != 'done'`)
+  const noDueDateRow = get<{ n: number }>(d, `SELECT COUNT(*) as n FROM tasks WHERE due_date IS NULL AND status != 'done'`)
+  const totalOpen   = statusRows.filter(r => r.status !== 'done').reduce((s, r) => s + r.n, 0)
+
+  // ── Label breakdown ──────────────────────────────────────────────────────
+  const taskRows = all<{ labels: string; status: string }>(d, 'SELECT labels, status FROM tasks')
+  const bkMap: Record<string, LabelBreakdownItem> = {}
+  for (const row of taskRows) {
+    const labels: string[] = JSON.parse(row.labels)
+    const top = labels[0]?.split('/')[0] ?? 'Unlabeled'
+    if (!bkMap[top]) bkMap[top] = { label: top, colour: colourMap[top] ?? '#8E8E93', total: 0, done: 0, inProgress: 0, todo: 0, backlog: 0 }
+    const b = bkMap[top]; b.total++
+    if      (row.status === 'done')        b.done++
+    else if (row.status === 'in_progress') b.inProgress++
+    else if (row.status === 'todo')        b.todo++
+    else                                   b.backlog++
+  }
+
+  return {
+    velocity,
+    completionTime: { byPriority, byLabel },
+    backlogHealth: {
+      byStatus:       statusRows.map(r => ({ status: r.status, count: r.n })),
+      overdueCount:   overdueRow?.n ?? 0,
+      avgAgeDays:     Math.round((avgAgeRow?.avg ?? 0) * 10) / 10,
+      noDueDateCount: noDueDateRow?.n ?? 0,
+      totalOpen,
+    },
+    labelBreakdown: Object.values(bkMap).sort((a, b) => b.total - a.total),
+  }
 }

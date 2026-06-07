@@ -15,7 +15,7 @@ interface TaskStore {
   activePriority: TaskPriority | null
   activeDue: DueFilter | null
   searchQuery: string
-  viewMode: 'kanban' | 'list'
+  viewMode: 'kanban' | 'list' | 'reports'
   listSort: ListSort
   listGroup: ListGroup
 
@@ -32,7 +32,7 @@ interface TaskStore {
   setActivePriority: (priority: TaskPriority | null) => void
   setActiveDue: (due: DueFilter | null) => void
   setSearchQuery: (q: string) => void
-  setViewMode: (mode: 'kanban' | 'list') => void
+  setViewMode: (mode: 'kanban' | 'list' | 'reports') => void
   setListSort: (sort: ListSort) => void
   setListGroup: (group: ListGroup) => void
 }
