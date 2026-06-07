@@ -31,6 +31,11 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('labels:tree', () => getLabelTree())
 
+  ipcMain.handle('labels:create', async (_e, id: string, name: string, parentId: string | null) => {
+    await createLabel(id, name, parentId)
+    broadcast({ type: 'labels:changed', added: 1 })
+  })
+
   ipcMain.handle('labels:sync-drive', async () => {
     const drivePath = join(homedir(), 'Library/CloudStorage/GoogleDrive/My Drive')
     const result = await syncLabelsFromDrive(drivePath)

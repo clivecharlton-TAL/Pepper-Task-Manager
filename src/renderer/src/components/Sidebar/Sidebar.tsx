@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useTaskStore, type DueFilter } from '../../stores/taskStore'
 import LabelTree from './LabelTree'
 import type { Task, TaskStatus, TaskPriority } from '../../../../shared/types'
@@ -182,6 +182,26 @@ export default function Sidebar({ width }: { width?: number }) {
   } = useTaskStore()
 
   const crossCuttingLabels = labels.filter(l => l.id.startsWith('+'))
+  const [addingTag,  setAddingTag]  = useState(false)
+  const [newTagName, setNewTagName] = useState('')
+  const tagInputRef = useRef<HTMLInputElement>(null)
+
+  const startAddingTag = () => {
+    setNewTagName('')
+    setAddingTag(true)
+    setTimeout(() => tagInputRef.current?.focus(), 0)
+  }
+
+  const cancelAddingTag = () => { setAddingTag(false); setNewTagName('') }
+
+  const confirmAddingTag = async () => {
+    const raw = newTagName.trim()
+    if (!raw) { cancelAddingTag(); return }
+    const name = raw.startsWith('+') ? raw : `+${raw}`
+    cancelAddingTag()
+    await window.api.labels.create(name, name, null)
+    // labels:changed event triggers loadLabels() automatically via store init
+  }
 
   const clearAll = () => {
     setActiveLabel(null)
@@ -277,40 +297,61 @@ export default function Sidebar({ width }: { width?: number }) {
       <div className="h-px bg-[#2e2e2e] mx-3 mb-2 flex-shrink-0" />
 
       {/* Cross-cutting tags */}
-      {crossCuttingLabels.length > 0 && (
-        <div className="px-2 pb-2 flex-shrink-0">
-          <div className="px-3 py-1.5 mb-1.5">
-            <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Tags</span>
-          </div>
-          <div className="px-3 flex flex-wrap gap-1.5">
-            {crossCuttingLabels.map(l => {
-              const count = allTasks.filter(t => t.status !== 'done' && t.labels.includes(l.id)).length
-              const isActive = activeLabel === l.id
-              return (
-                <button
-                  key={l.id}
-                  onClick={() => setActiveLabel(isActive ? null : l.id)}
-                  className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded border transition-all"
-                  style={isActive
-                    ? { backgroundColor: l.colour + '22', borderColor: l.colour + '66', color: l.colour }
-                    : { backgroundColor: 'transparent', borderColor: '#383838', color: '#888888' }
-                  }
-                >
-                  {l.name}
-                  {count > 0 && (
-                    <span
-                      className="font-mono text-[9px] ml-0.5"
-                      style={{ color: isActive ? l.colour : '#555555' }}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+      <div className="px-2 pb-2 flex-shrink-0">
+        <div className="px-3 py-1.5 mb-1.5 flex items-center justify-between">
+          <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Tags</span>
+          <button
+            onClick={startAddingTag}
+            title="New tag"
+            className="text-[#4a4a4a] hover:text-[#5AC8FA] transition-colors"
+          >
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor">
+              <rect x="4" y="0" width="2" height="10" rx="1"/>
+              <rect x="0" y="4" width="10" height="2" rx="1"/>
+            </svg>
+          </button>
         </div>
-      )}
+        <div className="px-3 flex flex-wrap gap-1.5">
+          {crossCuttingLabels.map(l => {
+            const count = allTasks.filter(t => t.status !== 'done' && t.labels.includes(l.id)).length
+            const isActive = activeLabel === l.id
+            return (
+              <button
+                key={l.id}
+                onClick={() => setActiveLabel(isActive ? null : l.id)}
+                className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded border transition-all"
+                style={isActive
+                  ? { backgroundColor: l.colour + '22', borderColor: l.colour + '66', color: l.colour }
+                  : { backgroundColor: 'transparent', borderColor: '#383838', color: '#888888' }
+                }
+              >
+                {l.name}
+                {count > 0 && (
+                  <span className="font-mono text-[9px] ml-0.5" style={{ color: isActive ? l.colour : '#555555' }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+
+          {addingTag && (
+            <input
+              ref={tagInputRef}
+              value={newTagName}
+              onChange={e => setNewTagName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); confirmAddingTag() }
+                if (e.key === 'Escape') cancelAddingTag()
+                e.stopPropagation()
+              }}
+              onBlur={cancelAddingTag}
+              placeholder="+tag"
+              className="font-mono text-[10px] px-2 py-0.5 rounded border border-[#5AC8FA]/40 bg-[#5AC8FA]/10 text-[#5AC8FA] placeholder-[#5AC8FA]/30 focus:outline-none w-16"
+            />
+          )}
+        </div>
+      </div>
 
       <div className="h-px bg-[#2e2e2e] mx-3 mb-2 flex-shrink-0" />
 

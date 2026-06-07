@@ -11,7 +11,8 @@ const api = {
   },
   labels: {
     tree: (): Promise<LabelNode[]> => ipcRenderer.invoke('labels:tree'),
-    syncDrive: (): Promise<{ added: number }> => ipcRenderer.invoke('labels:sync-drive')
+    syncDrive: (): Promise<{ added: number }> => ipcRenderer.invoke('labels:sync-drive'),
+    create: (id: string, name: string, parentId: string | null): Promise<void> => ipcRenderer.invoke('labels:create', id, name, parentId),
   },
   reports: {
     get: (rangeDays: number): Promise<ReportData> => ipcRenderer.invoke('reports:get', rangeDays)
