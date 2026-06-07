@@ -22,6 +22,16 @@ const api = {
     reveal: (relativePath: string): Promise<void>                  => ipcRenderer.invoke('files:reveal', relativePath),
     mkdir:  (relativePath: string): Promise<{ created: boolean }>  => ipcRenderer.invoke('files:mkdir', relativePath),
   },
+  ai: {
+    hasKey:  (): Promise<boolean>  => ipcRenderer.invoke('ai:has-key'),
+    saveKey: (key: string): Promise<void> => ipcRenderer.invoke('ai:save-key', key),
+    draft:   (title: string): Promise<void> => ipcRenderer.invoke('ai:draft', title),
+    onChunk: (fn: (chunk: string) => void): () => void => {
+      const wrapped = (_e: Electron.IpcRendererEvent, chunk: string) => fn(chunk)
+      ipcRenderer.on('ai:chunk', wrapped)
+      return () => ipcRenderer.removeListener('ai:chunk', wrapped)
+    },
+  },
   window: {
     hideQuickAdd: () => ipcRenderer.send('quick-add:hide'),
     showMain: () => ipcRenderer.send('main-window:show'),

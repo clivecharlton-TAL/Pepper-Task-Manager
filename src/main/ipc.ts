@@ -3,6 +3,7 @@ import { join } from 'path'
 import { homedir } from 'os'
 import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
+import { hasApiKey, saveApiKey, streamDraft } from './ai'
 import { broadcast } from './events'
 import type { CreateTaskInput, UpdateTaskInput, TaskFilters } from '../shared/types'
 
@@ -38,6 +39,14 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('reports:get', (_e, rangeDays: number) => getReportData(rangeDays))
+
+  ipcMain.handle('ai:has-key', () => hasApiKey())
+  ipcMain.handle('ai:save-key', (_e, key: string) => { saveApiKey(key) })
+  ipcMain.handle('ai:draft', async (event, title: string) => {
+    await streamDraft(title, (chunk) => {
+      if (!event.sender.isDestroyed()) event.sender.send('ai:chunk', chunk)
+    })
+  })
 
   ipcMain.handle('files:list', (_e, relativePath: string) => listFiles(relativePath))
   ipcMain.handle('files:open', (_e, relativePath: string) => openFile(relativePath))
