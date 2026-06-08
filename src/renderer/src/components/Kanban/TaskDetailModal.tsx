@@ -78,6 +78,8 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [priority,       setPriority]       = useState<TaskPriority>(task.priority)
   const [dueDate,        setDueDate]        = useState(task.due_date ? task.due_date.slice(0, 10) : '')
   const [selectedLabels, setSelectedLabels] = useState<string[]>(task.labels)
+  const [assigned,       setAssigned]       = useState<string[]>(task.assigned ?? [])
+  const [assignedInput,  setAssignedInput]  = useState('')
   const [notesMode,      setNotesMode]      = useState<'edit' | 'preview'>('preview')
   const [showLabels,     setShowLabels]     = useState(false)
   const [showQuarters,   setShowQuarters]   = useState(false)
@@ -87,12 +89,15 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [keyInput,       setKeyInput]       = useState('')
   const labelPickerRef   = useRef<HTMLDivElement>(null)
   const quarterPickerRef = useRef<HTMLDivElement>(null)
-  const titleInputRef  = useRef<HTMLInputElement>(null)
-  const notesRef       = useRef<HTMLTextAreaElement>(null)
-  const [titleMention, setTitleMention] = useState<MentionState>(NO_MENTION)
-  const [notesMention, setNotesMention] = useState<MentionState>(NO_MENTION)
-  const titlePending   = useRef<number | null>(null)
-  const notesPending   = useRef<number | null>(null)
+  const titleInputRef    = useRef<HTMLInputElement>(null)
+  const notesRef         = useRef<HTMLTextAreaElement>(null)
+  const assignedInputRef = useRef<HTMLInputElement>(null)
+  const [titleMention,    setTitleMention]    = useState<MentionState>(NO_MENTION)
+  const [notesMention,    setNotesMention]    = useState<MentionState>(NO_MENTION)
+  const [assignedMention, setAssignedMention] = useState<MentionState>(NO_MENTION)
+  const titlePending    = useRef<number | null>(null)
+  const notesPending    = useRef<number | null>(null)
+  const assignedPending = useRef<number | null>(null)
 
   function handleMentionKeyDown(
     e: React.KeyboardEvent,
@@ -157,6 +162,13 @@ export default function TaskDetailModal({ task, onClose }: Props) {
     notesRef.current?.focus()
   }
 
+  const insertAssignedMention = (name: string) => {
+    if (!assigned.includes(name)) setAssigned(prev => [...prev, name])
+    setAssignedInput('')
+    setAssignedMention(NO_MENTION)
+    assignedInputRef.current?.focus()
+  }
+
   const handleAiDraft = async () => {
     setAiError('')
     const hasKey = await window.api.ai.hasKey()
@@ -195,7 +207,8 @@ export default function TaskDetailModal({ task, onClose }: Props) {
     status    !== task.status ||
     priority  !== task.priority ||
     dueDate   !== (task.due_date ? task.due_date.slice(0, 10) : '') ||
-    JSON.stringify([...selectedLabels].sort()) !== JSON.stringify([...task.labels].sort())
+    JSON.stringify([...selectedLabels].sort()) !== JSON.stringify([...task.labels].sort()) ||
+    JSON.stringify([...assigned].sort()) !== JSON.stringify([...(task.assigned ?? [])].sort())
 
   const saveRef = useRef<() => void>(() => {})
   saveRef.current = () => {
@@ -208,6 +221,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
       priority,
       due_date: dueDate || undefined,
       labels: selectedLabels,
+      assigned,
     })
   }
 
@@ -495,6 +509,59 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                     />
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Assigned */}
+            <div className="flex items-start gap-4">
+              <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] w-20 pt-1 flex-shrink-0">Assigned</span>
+              <div className="flex-1">
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  {assigned.map(name => (
+                    <span
+                      key={name}
+                      className="font-mono text-[10px] tracking-wide px-2 py-0.5 rounded flex items-center gap-1"
+                      style={{ backgroundColor: '#4a9eca22', color: '#4a9eca' }}
+                    >
+                      @{name}
+                      <button
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={() => setAssigned(prev => prev.filter(n => n !== name))}
+                        className="opacity-50 hover:opacity-100 transition-opacity leading-none ml-0.5"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  <div className="relative">
+                    <input
+                      ref={assignedInputRef}
+                      value={assignedInput}
+                      onChange={e => {
+                        const val = e.target.value
+                        const pos = e.target.selectionStart ?? val.length
+                        setAssignedInput(val)
+                        handleMentionChange(val, pos, assignedMention, setAssignedMention, assignedPending, assignedInputRef.current)
+                      }}
+                      onKeyDown={e => {
+                        e.stopPropagation()
+                        handleMentionKeyDown(e, assignedMention, setAssignedMention, assignedPending, assignedInputRef.current, insertAssignedMention)
+                      }}
+                      placeholder="@ to assign…"
+                      className="bg-transparent font-mono text-[10px] text-[#d4d4d4] placeholder-[#444444] focus:outline-none"
+                      style={{ minWidth: 100 }}
+                    />
+                    {assignedMention.active && assignedMention.rect && (
+                      <MentionPopover
+                        query={assignedMention.query}
+                        highlight={assignedMention.highlight}
+                        anchorRect={assignedMention.rect}
+                        onSelect={insertAssignedMention}
+                        onClose={() => setAssignedMention(NO_MENTION)}
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 

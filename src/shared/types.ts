@@ -9,6 +9,7 @@ export interface Task {
   priority: TaskPriority
   due_date: string | null
   labels: string[]
+  assigned: string[]
   linked_email_id: string | null
   linked_email_subject: string | null
   created_at: string
@@ -34,6 +35,7 @@ export interface CreateTaskInput {
   priority?: TaskPriority
   due_date?: string
   labels?: string[]
+  assigned?: string[]
   linked_email_id?: string
   linked_email_subject?: string
 }
@@ -46,6 +48,7 @@ export interface UpdateTaskInput {
   priority?: TaskPriority
   due_date?: string | null
   labels?: string[]
+  assigned?: string[]
   linked_email_id?: string | null
   linked_email_subject?: string | null
 }

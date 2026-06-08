@@ -49,6 +49,7 @@ function migrate(db: Database): void {
       priority TEXT NOT NULL DEFAULT 'medium',
       due_date TEXT,
       labels TEXT NOT NULL DEFAULT '[]',
+      assigned TEXT NOT NULL DEFAULT '[]',
       linked_email_id TEXT,
       linked_email_subject TEXT,
       created_at TEXT NOT NULL,
@@ -64,6 +65,9 @@ function migrate(db: Database): void {
       occurred_at TEXT NOT NULL
     );
   `)
+
+  // Migration: add assigned column to existing databases
+  try { db.run(`ALTER TABLE tasks ADD COLUMN assigned TEXT NOT NULL DEFAULT '[]'`) } catch { /* column already exists */ }
 
   seedLabels(db)
   seedCrossCuttingLabels(db)
@@ -282,7 +286,11 @@ export async function syncLabelsFromDrive(drivePath: string): Promise<{ added: n
 // ─── Tasks ─────────────────────────────────────────────────────────────────
 
 function parseTask(row: Record<string, unknown>): Task {
-  return { ...(row as Omit<Task, 'labels'>), labels: JSON.parse(row.labels as string) }
+  return {
+    ...(row as Omit<Task, 'labels' | 'assigned'>),
+    labels: JSON.parse(row.labels as string),
+    assigned: JSON.parse((row.assigned as string | null | undefined) ?? '[]'),
+  }
 }
 
 export async function getTasks(filters: TaskFilters = {}): Promise<Task[]> {
@@ -293,8 +301,8 @@ export async function getTasks(filters: TaskFilters = {}): Promise<Task[]> {
   if (filters.status) { sql += ' AND status = ?'; params.push(filters.status) }
   if (filters.priority) { sql += ' AND priority = ?'; params.push(filters.priority) }
   if (filters.search) {
-    sql += ' AND (title LIKE ? OR notes LIKE ?)'
-    params.push(`%${filters.search}%`, `%${filters.search}%`)
+    sql += ' AND (title LIKE ? OR notes LIKE ? OR assigned LIKE ?)'
+    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`)
   }
   if (filters.label) { sql += ' AND labels LIKE ?'; params.push(`%${filters.label}%`) }
   sql += ' ORDER BY created_at DESC'
@@ -313,17 +321,18 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
     priority: input.priority ?? 'medium',
     due_date: input.due_date ?? null,
     labels: input.labels ?? [],
+    assigned: input.assigned ?? [],
     linked_email_id: input.linked_email_id ?? null,
     linked_email_subject: input.linked_email_subject ?? null,
     created_at: now,
     updated_at: now
   }
   run(d,
-    `INSERT INTO tasks (id,title,notes,status,priority,due_date,labels,
+    `INSERT INTO tasks (id,title,notes,status,priority,due_date,labels,assigned,
       linked_email_id,linked_email_subject,created_at,updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     [task.id, task.title, task.notes, task.status, task.priority,
-     task.due_date, JSON.stringify(task.labels),
+     task.due_date, JSON.stringify(task.labels), JSON.stringify(task.assigned),
      task.linked_email_id, task.linked_email_subject,
      task.created_at, task.updated_at]
   )
@@ -354,9 +363,9 @@ export async function updateTask(input: UpdateTaskInput): Promise<Task | null> {
   }
   run(d,
     `UPDATE tasks SET title=?,notes=?,status=?,priority=?,due_date=?,
-      labels=?,linked_email_id=?,linked_email_subject=?,updated_at=? WHERE id=?`,
+      labels=?,assigned=?,linked_email_id=?,linked_email_subject=?,updated_at=? WHERE id=?`,
     [updated.title, updated.notes, updated.status, updated.priority,
-     updated.due_date, JSON.stringify(updated.labels),
+     updated.due_date, JSON.stringify(updated.labels), JSON.stringify(updated.assigned ?? []),
      updated.linked_email_id, updated.linked_email_subject,
      updated.updated_at, updated.id]
   )

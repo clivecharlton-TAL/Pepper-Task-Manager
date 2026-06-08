@@ -30,6 +30,7 @@ function matchesSearch(task: Task, q: string, flat: LabelNode[]): boolean {
   if (task.notes?.toLowerCase().includes(s)) return true
   if (task.labels.some(id => id.toLowerCase().includes(s))) return true
   if (task.labels.some(id => flat.find(l => l.id === id)?.name.toLowerCase().includes(s))) return true
+  if ((task.assigned ?? []).some(name => name.toLowerCase().includes(s))) return true
   return false
 }
 
