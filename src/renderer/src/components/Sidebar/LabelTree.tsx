@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useDroppable } from '@dnd-kit/core'
 import { useTaskStore } from '../../stores/taskStore'
 import type { LabelNode, Task } from '../../../../shared/types'
 
@@ -21,16 +22,17 @@ const depthTextClass = (depth: number, isActive: boolean) => {
 function LabelRow({ node, depth, tasks }: { node: LabelNode; depth: number; tasks: Task[] }) {
   const [expanded, setExpanded] = useState(false)
   const { activeLabel, setActiveLabel } = useTaskStore()
+  const { setNodeRef, isOver } = useDroppable({ id: `label:${node.id}` })
   const hasChildren = node.children.length > 0
   const isActive = activeLabel === node.id
   const count = countTasks(node, tasks)
 
   return (
-    <div>
+    <div ref={setNodeRef}>
       <button
         onClick={() => { setActiveLabel(node.id); if (hasChildren) setExpanded(e => !e) }}
         className={`w-full flex items-center gap-2 py-1.5 px-2 rounded text-left transition-colors group ${
-          isActive ? 'bg-[#3d2218]/60' : 'hover:bg-[#2a2a2a]'
+          isActive ? 'bg-[#3d2218]/60' : isOver ? 'bg-[#1e3a22]' : 'hover:bg-[#2a2a2a]'
         }`}
         style={{ paddingLeft: `${8 + depth * 14}px` }}
       >
@@ -59,8 +61,12 @@ function LabelRow({ node, depth, tasks }: { node: LabelNode; depth: number; task
           {node.name}
         </span>
 
-        {/* Count badge — cumulative across this node and all descendants */}
-        {count > 0 && (
+        {/* Drop indicator or count badge */}
+        {isOver ? (
+          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded flex-shrink-0 ml-1 bg-[#30D158]/20 text-[#30D158]">
+            + add
+          </span>
+        ) : count > 0 && (
           <span
             className="font-mono text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ml-1"
             style={{ backgroundColor: node.colour + '22', color: node.colour }}

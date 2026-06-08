@@ -1,7 +1,8 @@
 import { useRef, useState, type ReactNode } from 'react'
+import { useDroppable } from '@dnd-kit/core'
 import { useTaskStore, type DueFilter } from '../../stores/taskStore'
 import LabelTree from './LabelTree'
-import type { Task, TaskStatus, TaskPriority } from '../../../../shared/types'
+import type { Task, TaskStatus, TaskPriority, LabelNode } from '../../../../shared/types'
 
 function IconBacklog() {
   return (
@@ -136,6 +137,33 @@ function matchesDue(task: Task, filter: DueFilter): boolean {
   if (filter === 'today')     return due === today
   if (filter === 'this_week') return due >= today && due <= eow
   return false
+}
+
+function DroppableTag({ label, count, isActive, onActivate }: {
+  label: LabelNode; count: number; isActive: boolean; onActivate: () => void
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `label:${label.id}` })
+  return (
+    <div ref={setNodeRef}>
+      <button
+        onClick={onActivate}
+        className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded border transition-all"
+        style={isActive || isOver
+          ? { backgroundColor: label.colour + '33', borderColor: label.colour + '88', color: label.colour }
+          : { backgroundColor: 'transparent', borderColor: '#383838', color: '#888888' }
+        }
+      >
+        {label.name}
+        {isOver ? (
+          <span className="font-mono text-[9px] ml-0.5 text-[#30D158]">+</span>
+        ) : count > 0 && (
+          <span className="font-mono text-[9px] ml-0.5" style={{ color: isActive ? label.colour : '#555555' }}>
+            {count}
+          </span>
+        )}
+      </button>
+    </div>
+  )
 }
 
 function FilterRow({
@@ -316,22 +344,13 @@ export default function Sidebar({ width }: { width?: number }) {
             const count = allTasks.filter(t => t.status !== 'done' && t.labels.includes(l.id)).length
             const isActive = activeLabel === l.id
             return (
-              <button
+              <DroppableTag
                 key={l.id}
-                onClick={() => setActiveLabel(isActive ? null : l.id)}
-                className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded border transition-all"
-                style={isActive
-                  ? { backgroundColor: l.colour + '22', borderColor: l.colour + '66', color: l.colour }
-                  : { backgroundColor: 'transparent', borderColor: '#383838', color: '#888888' }
-                }
-              >
-                {l.name}
-                {count > 0 && (
-                  <span className="font-mono text-[9px] ml-0.5" style={{ color: isActive ? l.colour : '#555555' }}>
-                    {count}
-                  </span>
-                )}
-              </button>
+                label={l}
+                count={count}
+                isActive={isActive}
+                onActivate={() => setActiveLabel(isActive ? null : l.id)}
+              />
             )
           })}
 

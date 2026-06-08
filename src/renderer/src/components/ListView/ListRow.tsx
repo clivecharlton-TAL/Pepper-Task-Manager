@@ -1,3 +1,4 @@
+import { useDraggable } from '@dnd-kit/core'
 import { format, parseISO, isPast, isToday, isTomorrow } from 'date-fns'
 import type { Task, TaskStatus, TaskPriority, LabelNode } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
@@ -70,6 +71,7 @@ interface Props {
 
 export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
   const { deleteTask, updateTask } = useTaskStore()
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
   const isDone = task.status === 'done'
   const due = task.due_date ? dueDateLabel(task.due_date) : null
   const labelMeta = task.labels
@@ -82,12 +84,15 @@ export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
   }
 
   return (
-    <div className="group">
+    <div className={`group ${isDragging ? 'opacity-40' : ''}`}>
       <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
         className="flex items-start gap-3 py-3 px-3 -mx-3 cursor-pointer rounded-lg hover:bg-[#242424] transition-colors"
-        onClick={() => onOpen(task)}
+        onClick={() => !isDragging && onOpen(task)}
       >
-        {/* Status circle — click to mark done */}
+        {/* Status circle — click to mark done; stopPropagation prevents drag from activating */}
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={toggleDone}

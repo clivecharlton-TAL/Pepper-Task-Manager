@@ -1,4 +1,16 @@
 import { useState, useCallback, useRef } from 'react'
+import {
+  DndContext,
+  DragOverlay,
+  type DragStartEvent,
+  type DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  pointerWithin,
+  rectIntersection,
+  type CollisionDetection,
+} from '@dnd-kit/core'
 import Sidebar from './Sidebar/Sidebar'
 import KanbanBoard from './Kanban/KanbanBoard'
 import ListView from './ListView/ListView'
@@ -6,17 +18,61 @@ import ReportsView from './Reports/ReportsView'
 import FilesView from './Files/FilesView'
 import CalendarView from './Calendar/CalendarView'
 import TopBar from './shared/TopBar'
+import TaskCard from './Kanban/TaskCard'
 import { useTaskStore } from '../stores/taskStore'
+import { KANBAN_COLUMNS, type Task, type TaskStatus } from '../../../shared/types'
 
 const MIN_WIDTH = 160
 const MAX_WIDTH = 400
 
+const appCollision: CollisionDetection = (args) => {
+  const hits = pointerWithin(args)
+  return hits.length > 0 ? hits : rectIntersection(args)
+}
+
 export default function MainWindow() {
-  const { viewMode } = useTaskStore()
+  const { viewMode, allTasks, updateTask } = useTaskStore()
   const [sidebarWidth, setSidebarWidth] = useState(208)
+  const [draggingTask, setDraggingTask] = useState<Task | null>(null)
   const dragging = useRef(false)
   const startX = useRef(0)
   const startWidth = useRef(0)
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+
+  const onDragStart = ({ active }: DragStartEvent) => {
+    setDraggingTask(allTasks.find(t => t.id === active.id) ?? null)
+  }
+
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    setDraggingTask(null)
+    if (!over) return
+    const taskId = active.id as string
+    const overId = over.id as string
+
+    // Dropped on a sidebar label — add label to task
+    if (overId.startsWith('label:')) {
+      const labelId = overId.slice('label:'.length)
+      const task = allTasks.find(t => t.id === taskId)
+      if (task && !task.labels.includes(labelId)) {
+        updateTask({ id: taskId, labels: [...task.labels, labelId] })
+      }
+      return
+    }
+
+    // Kanban: dropped on a status column
+    const colIds = KANBAN_COLUMNS.map(c => c.id)
+    if (colIds.includes(overId as TaskStatus)) {
+      updateTask({ id: taskId, status: overId as TaskStatus })
+      return
+    }
+
+    // Kanban: dropped on another task → inherit that task's status
+    const overTask = allTasks.find(t => t.id === overId)
+    if (overTask) {
+      updateTask({ id: taskId, status: overTask.status })
+    }
+  }
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -39,24 +95,35 @@ export default function MainWindow() {
   }, [sidebarWidth])
 
   return (
-    <div className="flex h-screen bg-[#1c1c1e] overflow-hidden">
-      <Sidebar width={sidebarWidth} />
+    <DndContext
+      sensors={sensors}
+      collisionDetection={appCollision}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+    >
+      <div className="flex h-screen bg-[#1c1c1e] overflow-hidden">
+        <Sidebar width={sidebarWidth} />
 
-      {/* Resize handle */}
-      <div
-        className="w-1 flex-shrink-0 cursor-col-resize hover:bg-[#c45d2e]/40 transition-colors active:bg-[#c45d2e]/60 z-10"
-        style={{ background: 'transparent' }}
-        onMouseDown={onMouseDown}
-      />
+        {/* Resize handle */}
+        <div
+          className="w-1 flex-shrink-0 cursor-col-resize hover:bg-[#c45d2e]/40 transition-colors active:bg-[#c45d2e]/60 z-10"
+          style={{ background: 'transparent' }}
+          onMouseDown={onMouseDown}
+        />
 
-      <div className="flex flex-col flex-1 min-w-0">
-        <TopBar />
-        {viewMode === 'kanban'   ? <KanbanBoard />   :
-         viewMode === 'list'     ? <ListView />      :
-         viewMode === 'reports'  ? <ReportsView />   :
-         viewMode === 'files'    ? <FilesView />     :
-                                   <CalendarView />}
+        <div className="flex flex-col flex-1 min-w-0">
+          <TopBar />
+          {viewMode === 'kanban'   ? <KanbanBoard />   :
+           viewMode === 'list'     ? <ListView />      :
+           viewMode === 'reports'  ? <ReportsView />   :
+           viewMode === 'files'    ? <FilesView />     :
+                                     <CalendarView />}
+        </div>
       </div>
-    </div>
+
+      <DragOverlay>
+        {draggingTask && <TaskCard task={draggingTask} isDragging />}
+      </DragOverlay>
+    </DndContext>
   )
 }
