@@ -355,17 +355,27 @@ export async function updateTask(input: UpdateTaskInput): Promise<Task | null> {
   const existing = get<Record<string, unknown>>(d, 'SELECT * FROM tasks WHERE id = ?', [input.id])
   if (!existing) return null
   const current = parseTask(existing)
-  const updated = {
-    ...current,
-    ...input,
-    labels: input.labels ?? current.labels,
-    updated_at: new Date().toISOString()
+  // Explicit merge — never let undefined reach sql.js (it throws).
+  // `'key' in input` distinguishes "not provided" from "explicitly set to null/undefined".
+  const updated: Task = {
+    id: current.id,
+    title:              input.title    ?? current.title,
+    notes:              'notes'              in input ? (input.notes              ?? null) : current.notes,
+    status:             input.status   ?? current.status,
+    priority:           input.priority ?? current.priority,
+    due_date:           'due_date'           in input ? (input.due_date           ?? null) : current.due_date,
+    labels:             input.labels   ?? current.labels,
+    assigned:           input.assigned ?? current.assigned,
+    linked_email_id:    'linked_email_id'    in input ? input.linked_email_id    : current.linked_email_id,
+    linked_email_subject: 'linked_email_subject' in input ? input.linked_email_subject : current.linked_email_subject,
+    created_at:         current.created_at,
+    updated_at:         new Date().toISOString(),
   }
   run(d,
     `UPDATE tasks SET title=?,notes=?,status=?,priority=?,due_date=?,
       labels=?,assigned=?,linked_email_id=?,linked_email_subject=?,updated_at=? WHERE id=?`,
     [updated.title, updated.notes, updated.status, updated.priority,
-     updated.due_date, JSON.stringify(updated.labels), JSON.stringify(updated.assigned ?? []),
+     updated.due_date, JSON.stringify(updated.labels), JSON.stringify(updated.assigned),
      updated.linked_email_id, updated.linked_email_subject,
      updated.updated_at, updated.id]
   )
