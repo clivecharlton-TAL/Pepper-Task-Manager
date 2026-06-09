@@ -3,16 +3,19 @@ import { useLocation } from './hooks/useLocation'
 import MainWindow from './components/MainWindow'
 import QuickAddPanel from './components/QuickAdd/QuickAddPanel'
 import { useTaskStore } from './stores/taskStore'
+import { useAttachmentCountStore } from './stores/attachmentCountStore'
 
 export default function App() {
   const { isQuickAdd } = useLocation()
   const { labels, tasks, loadTasks, loadAllTasks, loadLabels, init } = useTaskStore()
+  const { loadCounts } = useAttachmentCountStore()
 
   useEffect(() => {
     loadLabels()
     if (!isQuickAdd) {
       loadTasks()
       loadAllTasks()
+      loadCounts()
       return init()
     }
   }, [isQuickAdd])

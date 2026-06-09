@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import initSqlJs, { Database } from 'sql.js'
-import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem } from '../shared/types'
+import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem, TaskAttachment, TaskAttachmentWithStatus } from '../shared/types'
 
 const DB_PATH = join(app.getPath('userData'), 'tasks.db')
 
@@ -54,6 +54,14 @@ function migrate(db: Database): void {
       linked_email_subject TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS task_attachments (
+      id       TEXT PRIMARY KEY,
+      task_id  TEXT NOT NULL,
+      path     TEXT NOT NULL,
+      name     TEXT NOT NULL,
+      added_at TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS task_events (
@@ -503,4 +511,47 @@ export async function getReportData(rangeDays: number): Promise<ReportData> {
     },
     labelBreakdown: Object.values(bkMap).sort((a, b) => b.total - a.total),
   }
+}
+
+// ─── Attachments ────────────────────────────────────────────────────────────
+
+export async function listAttachments(taskId: string): Promise<TaskAttachmentWithStatus[]> {
+  const d = await getDb()
+  const rows = all<TaskAttachment>(d,
+    'SELECT * FROM task_attachments WHERE task_id = ? ORDER BY added_at ASC', [taskId])
+  return rows.map(r => ({ ...r, exists: existsSync(r.path) }))
+}
+
+export async function addAttachment(taskId: string, filePath: string): Promise<TaskAttachmentWithStatus | { error: string }> {
+  const d = await getDb()
+  const existing = all<TaskAttachment>(d, 'SELECT * FROM task_attachments WHERE task_id = ?', [taskId])
+  if (existing.length >= 10) return { error: 'Maximum 10 attachments per task' }
+  const duplicate = existing.find(r => r.path === filePath)
+  if (duplicate) return { ...duplicate, exists: existsSync(duplicate.path) }
+  const record: TaskAttachment = {
+    id: uuidv4(),
+    task_id: taskId,
+    path: filePath,
+    name: filePath.split('/').pop() ?? filePath,
+    added_at: new Date().toISOString(),
+  }
+  run(d, 'INSERT INTO task_attachments (id, task_id, path, name, added_at) VALUES (?, ?, ?, ?, ?)',
+    [record.id, record.task_id, record.path, record.name, record.added_at])
+  save()
+  return { ...record, exists: existsSync(record.path) }
+}
+
+export async function removeAttachment(attachmentId: string): Promise<void> {
+  const d = await getDb()
+  run(d, 'DELETE FROM task_attachments WHERE id = ?', [attachmentId])
+  save()
+}
+
+export async function countAttachments(): Promise<Record<string, number>> {
+  const d = await getDb()
+  const rows = all<{ task_id: string; n: number }>(d,
+    'SELECT task_id, COUNT(*) as n FROM task_attachments GROUP BY task_id')
+  const result: Record<string, number> = {}
+  for (const r of rows) result[r.task_id] = r.n
+  return result
 }

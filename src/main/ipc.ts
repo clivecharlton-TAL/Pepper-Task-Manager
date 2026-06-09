@@ -1,7 +1,7 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
-import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel } from './db'
+import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
 import { hasApiKey, saveApiKey, streamDraft } from './ai'
 import { broadcast } from './events'
@@ -52,6 +52,13 @@ export function registerIpcHandlers(): void {
       if (!event.sender.isDestroyed()) event.sender.send('ai:chunk', chunk)
     })
   })
+
+  ipcMain.handle('attachments:list',   (_e, taskId: string) => listAttachments(taskId))
+  ipcMain.handle('attachments:add',    (_e, taskId: string, filePath: string) => addAttachment(taskId, filePath))
+  ipcMain.handle('attachments:remove', (_e, id: string) => removeAttachment(id))
+  ipcMain.handle('attachments:counts', () => countAttachments())
+  ipcMain.handle('attachments:open',   (_e, filePath: string) => shell.openPath(filePath))
+  ipcMain.handle('attachments:reveal', (_e, filePath: string) => { shell.showItemInFolder(filePath); return null })
 
   ipcMain.handle('files:list', (_e, relativePath: string) => listFiles(relativePath))
   ipcMain.handle('files:open', (_e, relativePath: string) => openFile(relativePath))

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { Task, TaskPriority, TaskStatus, LabelNode } from '../../../../shared/types'
+import type { Task, TaskPriority, TaskStatus, LabelNode, TaskAttachmentWithStatus } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
 import LabelTreeView from '../QuickAdd/LabelTreeView'
 import MentionPopover from '../shared/MentionPopover'
@@ -87,6 +87,9 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [aiError,        setAiError]        = useState('')
   const [showKeyInput,   setShowKeyInput]   = useState(false)
   const [keyInput,       setKeyInput]       = useState('')
+  const [attachments,    setAttachments]    = useState<TaskAttachmentWithStatus[]>([])
+  const [attachDragging, setAttachDragging] = useState(false)
+  const [attachError,    setAttachError]    = useState('')
   const labelPickerRef   = useRef<HTMLDivElement>(null)
   const quarterPickerRef = useRef<HTMLDivElement>(null)
   const titleInputRef    = useRef<HTMLInputElement>(null)
@@ -255,6 +258,48 @@ export default function TaskDetailModal({ task, onClose }: Props) {
     return () => document.removeEventListener('mousedown', handler)
   }, [showQuarters])
 
+  useEffect(() => {
+    window.api.attachments.list(task.id).then(setAttachments)
+  }, [task.id])
+
+  const handleAttachFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const errors: string[] = []
+    for (const file of Array.from(files)) {
+      const result = await window.api.attachments.add(task.id, file.path)
+      if ('error' in result) { errors.push(result.error); break }
+      else setAttachments(prev => prev.some(a => a.id === result.id) ? prev : [...prev, result])
+    }
+    if (errors.length > 0) {
+      setAttachError(errors[0])
+      setTimeout(() => setAttachError(''), 3000)
+    }
+  }
+
+  const handleRemoveAttachment = async (id: string) => {
+    await window.api.attachments.remove(id)
+    setAttachments(prev => prev.filter(a => a.id !== id))
+  }
+
+  const handleModalDragOver = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return
+    e.preventDefault()
+    setAttachDragging(true)
+  }
+
+  const handleModalDragLeave = (e: React.DragEvent) => {
+    if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
+      setAttachDragging(false)
+    }
+  }
+
+  const handleModalDrop = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return
+    e.preventDefault()
+    setAttachDragging(false)
+    handleAttachFiles(e.dataTransfer.files)
+  }
+
   const labelMeta = selectedLabels.map(id => flat.find(l => l.id === id)).filter((l): l is LabelNode => !!l)
 
   return (
@@ -267,6 +312,9 @@ export default function TaskDetailModal({ task, onClose }: Props) {
         className="relative bg-[#242424] border border-[#383838] rounded-xl shadow-2xl flex flex-col"
         style={{ width: 600, maxHeight: '82vh' }}
         onMouseDown={e => e.stopPropagation()}
+        onDragOver={handleModalDragOver}
+        onDragLeave={handleModalDragLeave}
+        onDrop={handleModalDrop}
       >
         {/* Title */}
         <div className="flex items-center gap-3 px-6 pt-5 pb-4 flex-shrink-0 border-b border-[#2e2e2e]">
@@ -699,6 +747,50 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                 </span>
               </div>
             )}
+
+            {/* Attachments */}
+            <div className="flex items-start gap-4">
+              <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] w-20 pt-1 flex-shrink-0">Files</span>
+              <div
+                className={`flex-1 rounded-lg transition-all ${attachDragging ? 'border border-dashed border-[#c45d2e]/60 bg-[#c45d2e]/5 p-2' : 'p-0'}`}
+              >
+                {attachError && (
+                  <p className="font-mono text-[10px] text-[#FC2847] mb-1.5">{attachError}</p>
+                )}
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  {attachments.map(a => (
+                    <span
+                      key={a.id}
+                      className={`font-mono text-[10px] px-2 py-0.5 rounded flex items-center gap-1 ${
+                        a.exists
+                          ? 'bg-[#2e2e2e] text-[#b0b0b0] hover:text-[#e0e0e0] cursor-pointer'
+                          : 'bg-[#2a2a2a] text-[#4a4a4a] cursor-default'
+                      }`}
+                      onClick={() => a.exists && window.api.attachments.open(a.path)}
+                      onContextMenu={e => { e.preventDefault(); a.exists && window.api.attachments.reveal(a.path) }}
+                      title={a.exists ? a.path : `File not found: ${a.path}`}
+                    >
+                      {!a.exists && <span className="text-[#FFC400]">⚠</span>}
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0">
+                        <path d="M2 1h4l3 3v5H2V1z" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round"/>
+                        <path d="M6 1v3h3" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round"/>
+                      </svg>
+                      <span className="max-w-[140px] truncate">{a.name}</span>
+                      <button
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={e => { e.stopPropagation(); handleRemoveAttachment(a.id) }}
+                        className="opacity-50 hover:opacity-100 transition-opacity leading-none ml-0.5 hover:text-[#FC2847]"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  {attachments.length === 0 && !attachDragging && (
+                    <span className="font-mono text-[10px] text-[#3a3a3a]">Drop files here</span>
+                  )}
+                </div>
+              </div>
+            </div>
 
           </div>
         </div>

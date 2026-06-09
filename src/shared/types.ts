@@ -86,6 +86,18 @@ export interface CompletionTimeItem {
   colour: string
 }
 
+export interface TaskAttachment {
+  id: string
+  task_id: string
+  path: string
+  name: string
+  added_at: string
+}
+
+export interface TaskAttachmentWithStatus extends TaskAttachment {
+  exists: boolean
+}
+
 export interface FileEntry {
   name: string
   relativePath: string
