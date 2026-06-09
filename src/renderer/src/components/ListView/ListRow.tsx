@@ -77,6 +77,7 @@ export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
   const [fileDragging, setFileDragging] = useState(false)
   const isDone = task.status === 'done'
+  const isBacklog = task.status === 'backlog'
   const due = task.due_date ? dueDateLabel(task.due_date) : null
   const attachCount = counts[task.id] ?? 0
   const labelMeta = task.labels
@@ -113,7 +114,7 @@ export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
   }
 
   return (
-    <div className={`group ${isDragging ? 'opacity-40' : ''}`}>
+    <div className={`group ${isDragging ? 'opacity-40' : isBacklog ? 'opacity-55' : ''}`}>
       <div
         ref={setNodeRef}
         {...attributes}

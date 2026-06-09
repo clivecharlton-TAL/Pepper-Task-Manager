@@ -38,7 +38,8 @@ export default function TaskCard({ task, isDragging, onOpen }: Props) {
   const [fileDragging, setFileDragging] = useState(false)
   const attachCount = counts[task.id] ?? 0
 
-  const style = { transform: CSS.Transform.toString(transform), opacity: sorting ? 0.35 : 1 }
+  const isBacklog = task.status === 'backlog'
+  const style = { transform: CSS.Transform.toString(transform), opacity: sorting ? 0.35 : isBacklog ? 0.55 : 1 }
   const flat = flattenNodes(labels)
   const labelMeta = task.labels.map(id => flat.find(l => l.id === id)).filter((l): l is LabelNode => !!l)
   const due = task.due_date ? dueDateLabel(task.due_date) : null
