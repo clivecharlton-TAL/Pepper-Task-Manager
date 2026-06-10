@@ -40,6 +40,15 @@ export default function QuickAddPanel() {
   // Pull context from main process each time the window is focused (reshown)
   useEffect(() => {
     const onFocus = async () => {
+      // Always reset to a clean form first
+      setTitle('')
+      setNotes('')
+      setSelectedLabels([])
+      setPriority('medium')
+      setDueDate('')
+      setEmailCtx(null)
+      setView('form')
+
       const raw = await window.api.window.getContext()
       if (!raw) return
       const ctx = raw as { id?: string; subject?: string; body?: string; title?: string; notes?: string }
@@ -79,6 +88,12 @@ export default function QuickAddPanel() {
       linked_email_id: emailCtx?.id,
       linked_email_subject: emailCtx?.subject
     })
+    setTitle('')
+    setNotes('')
+    setSelectedLabels([])
+    setPriority('medium')
+    setDueDate('')
+    setEmailCtx(null)
     window.api.window.hideQuickAdd()
   }
 
