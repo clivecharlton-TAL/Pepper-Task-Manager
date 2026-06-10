@@ -869,7 +869,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
               <div className="flex-1 space-y-1">
 
                 {subTasks.map(st => (
-                  <div key={st.id} className="group/st flex items-center gap-2">
+                  <div key={st.id} className="group/st flex items-center gap-2 py-0.5">
                     {/* Checkbox */}
                     <button
                       onMouseDown={e => e.stopPropagation()}
@@ -883,7 +883,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                         </svg>
                       ) : (
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                          <circle cx="7" cy="7" r="6.5" stroke="#3a3a3a" strokeWidth="1"/>
+                          <circle cx="7" cy="7" r="6.5" stroke="#555555" strokeWidth="1"/>
                         </svg>
                       )}
                     </button>
@@ -904,10 +904,10 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                       <button
                         onMouseDown={e => e.stopPropagation()}
                         onClick={() => setAssignPickerId(assignPickerId === st.id ? null : st.id)}
-                        className={`font-mono text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                        className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
                           st.assigned
-                            ? 'bg-[#4a9eca22] text-[#4a9eca]'
-                            : 'text-[#3a3a3a] hover:text-[#666666]'
+                            ? 'border-[#4a9eca44] bg-[#4a9eca11] text-[#4a9eca]'
+                            : 'border-[#383838] text-[#666666] hover:border-[#555555] hover:text-[#999999]'
                         }`}
                       >
                         {st.assigned ? `@${st.assigned.split(' ')[0]}` : '@'}
@@ -946,18 +946,14 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                       value={st.due_date ?? ''}
                       onChange={e => handleSubTaskDate(st.id, e.target.value || null)}
                       onMouseDown={e => e.stopPropagation()}
-                      className={`bg-transparent font-mono text-[10px] focus:outline-none flex-shrink-0 [color-scheme:dark] ${
-                        st.due_date ? 'text-[#888888]' : 'text-[#3a3a3a] w-4 cursor-pointer'
-                      }`}
-                      style={st.due_date ? {} : { colorScheme: 'dark' }}
-                      title={st.due_date ? undefined : 'Set due date'}
+                      className="bg-transparent border border-[#383838] rounded px-1.5 py-0.5 font-mono text-[10px] text-[#888888] focus:outline-none focus:border-[#c45d2e]/50 [color-scheme:dark] flex-shrink-0 w-28"
                     />
 
                     {/* Remove */}
                     <button
                       onMouseDown={e => e.stopPropagation()}
                       onClick={() => handleDeleteSubTask(st.id)}
-                      className="font-mono text-[12px] text-transparent group-hover/st:text-[#333333] hover:!text-[#FC2847] transition-colors leading-none flex-shrink-0"
+                      className="font-mono text-[12px] text-transparent group-hover/st:text-[#444444] hover:!text-[#FC2847] transition-colors leading-none flex-shrink-0"
                     >
                       ×
                     </button>
@@ -965,20 +961,30 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                 ))}
 
                 {/* Add new sub-task */}
-                <div className="flex items-center gap-2 pt-0.5">
+                <div className="flex items-center gap-2 pt-1">
                   <div className="w-3.5 flex-shrink-0" />
                   <input
                     ref={newSubTaskRef}
                     value={newSubTaskTitle}
                     onChange={e => setNewSubTaskTitle(e.target.value)}
                     onMouseDown={e => e.stopPropagation()}
+                    onBlur={handleAddSubTask}
                     onKeyDown={e => {
                       e.stopPropagation()
                       if (e.key === 'Enter') handleAddSubTask()
                     }}
-                    placeholder="+ Add sub-task"
-                    className="flex-1 bg-transparent font-mono text-[11px] text-[#555555] placeholder-[#3a3a3a] focus:outline-none focus:text-[#d4d4d4] focus:placeholder-[#555555] transition-colors"
+                    placeholder="Add a sub-task…"
+                    className="flex-1 bg-transparent font-mono text-[11px] text-[#888888] placeholder-[#555555] focus:outline-none focus:text-[#d4d4d4] transition-colors"
                   />
+                  {newSubTaskTitle.trim() && (
+                    <button
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={handleAddSubTask}
+                      className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#c45d2e]/20 text-[#c45d2e] hover:bg-[#c45d2e]/30 transition-colors flex-shrink-0"
+                    >
+                      Add
+                    </button>
+                  )}
                 </div>
 
               </div>
