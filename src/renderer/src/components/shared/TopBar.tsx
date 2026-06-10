@@ -231,17 +231,13 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
         onClick={onToggleAIChat}
         title="AI Assistant"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        className={`no-drag p-1.5 rounded transition-colors ${
+        className={`no-drag px-2 py-1 rounded border font-mono text-[10px] transition-colors ${
           isAIChatOpen
-            ? 'bg-[#383838] text-[#c45d2e]'
-            : 'text-[#555555] hover:text-[#a0a0a0]'
+            ? 'bg-[#383838] border-[#c45d2e]/50 text-[#c45d2e]'
+            : 'bg-[#2a2a2a] border-[#333333] text-[#888888] hover:border-[#444444] hover:text-[#b0b0b0]'
         }`}
       >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <circle cx="7" cy="7" r="6.5" stroke="currentColor" strokeWidth="1.2"/>
-          <path d="M5 5.5C5 4.67 5.67 4 6.5 4H7.5C8.33 4 9 4.67 9 5.5C9 6.33 8.33 7 7.5 7H7V8.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-          <circle cx="7" cy="10" r="0.6" fill="currentColor"/>
-        </svg>
+        AI
       </button>
 
       {/* Search */}
