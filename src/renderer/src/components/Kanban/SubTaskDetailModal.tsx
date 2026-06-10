@@ -21,6 +21,10 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
   const [attachments,   setAttachments]   = useState<TaskAttachmentWithStatus[]>([])
   const [attachDragging, setAttachDragging] = useState(false)
   const [attachError,   setAttachError]   = useState('')
+  const [aiState,       setAiState]       = useState<'idle' | 'drafting' | 'error'>('idle')
+  const [aiError,       setAiError]       = useState('')
+  const [showKeyInput,  setShowKeyInput]  = useState(false)
+  const [keyInput,      setKeyInput]      = useState('')
   const pickerRef = useRef<HTMLDivElement>(null)
   const saveRef   = useRef<() => void>(() => {})
 
@@ -74,6 +78,35 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
       setAttachError(errors[0])
       setTimeout(() => setAttachError(''), 3000)
     }
+  }
+
+  const handleAiDraft = async () => {
+    setAiError('')
+    const hasKey = await window.api.ai.hasKey()
+    if (!hasKey) { setShowKeyInput(true); return }
+
+    setAiState('drafting')
+    setNotesMode('edit')
+    setNotes('')
+
+    const unsub = window.api.ai.onChunk((chunk) => setNotes(prev => prev + chunk))
+    try {
+      await window.api.ai.draft(title)
+    } catch (e) {
+      setAiError(String(e))
+      setAiState('error')
+    } finally {
+      unsub()
+      setAiState('idle')
+    }
+  }
+
+  const handleSaveKey = async () => {
+    if (!keyInput.trim()) return
+    await window.api.ai.saveKey(keyInput.trim())
+    setShowKeyInput(false)
+    setKeyInput('')
+    handleAiDraft()
   }
 
   const handleModalDragOver = (e: React.DragEvent) => {
@@ -154,15 +187,74 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
 
           {/* Notes */}
           <div>
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center justify-between mb-2">
               <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Notes</span>
-              <button
-                onClick={() => setNotesMode(m => m === 'edit' ? 'preview' : 'edit')}
-                className="font-mono text-[10px] text-[#4a4a4a] hover:text-[#888888] transition-colors"
-              >
-                {notesMode === 'edit' ? 'preview' : 'edit'}
-              </button>
+              <div className="flex items-center gap-1">
+                {(['edit', 'preview'] as const).map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setNotesMode(m)}
+                    disabled={aiState === 'drafting'}
+                    className={`font-mono text-[10px] px-2 py-0.5 rounded transition-colors capitalize disabled:opacity-30 ${
+                      notesMode === m ? 'bg-[#333333] text-[#f0f0f0]' : 'text-[#555555] hover:text-[#a0a0a0]'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+                <div className="w-px h-3 bg-[#333333] mx-0.5" />
+                <button
+                  onClick={handleAiDraft}
+                  disabled={aiState === 'drafting'}
+                  className={`flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded transition-all disabled:opacity-50 ${
+                    aiState === 'drafting'
+                      ? 'bg-[#c45d2e]/20 text-[#c45d2e] border border-[#c45d2e]/30'
+                      : 'text-[#c45d2e] hover:bg-[#c45d2e]/10 border border-transparent hover:border-[#c45d2e]/30'
+                  }`}
+                  title="Generate notes with AI"
+                >
+                  {aiState === 'drafting' ? (
+                    <>
+                      <svg className="animate-spin" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                      </svg>
+                      drafting…
+                    </>
+                  ) : (
+                    <>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+                      </svg>
+                      AI Draft
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
+
+            {showKeyInput && (
+              <div className="mb-2 flex items-center gap-2 p-2.5 bg-[#1e1e1e] border border-[#c45d2e]/30 rounded-lg">
+                <input
+                  autoFocus
+                  type="password"
+                  value={keyInput}
+                  onChange={e => setKeyInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleSaveKey()
+                    if (e.key === 'Escape') { setShowKeyInput(false); setKeyInput('') }
+                    e.stopPropagation()
+                  }}
+                  placeholder="Anthropic API key (sk-ant-…)"
+                  className="flex-1 bg-transparent font-mono text-[11px] text-[#d4d4d4] placeholder-[#444444] focus:outline-none"
+                />
+                <button onClick={handleSaveKey} className="font-mono text-[10px] px-2.5 py-1 bg-[#c45d2e] text-white rounded hover:bg-[#d4692e] transition-colors flex-shrink-0">Save</button>
+                <button onClick={() => { setShowKeyInput(false); setKeyInput('') }} className="font-mono text-[10px] text-[#555555] hover:text-[#f0f0f0] transition-colors">×</button>
+              </div>
+            )}
+
+            {aiState === 'error' && aiError && (
+              <p className="mb-2 font-mono text-[10px] text-[#FC2847]">{aiError}</p>
+            )}
 
             {notesMode === 'edit' ? (
               <textarea
