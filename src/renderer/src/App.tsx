@@ -4,11 +4,13 @@ import MainWindow from './components/MainWindow'
 import QuickAddPanel from './components/QuickAdd/QuickAddPanel'
 import { useTaskStore } from './stores/taskStore'
 import { useAttachmentCountStore } from './stores/attachmentCountStore'
+import { useSubTaskCountStore } from './stores/subTaskCountStore'
 
 export default function App() {
   const { isQuickAdd } = useLocation()
   const { labels, tasks, loadTasks, loadAllTasks, loadLabels, init } = useTaskStore()
   const { loadCounts } = useAttachmentCountStore()
+  const { loadCounts: loadSubTaskCounts } = useSubTaskCountStore()
 
   useEffect(() => {
     loadLabels()
@@ -16,6 +18,7 @@ export default function App() {
       loadTasks()
       loadAllTasks()
       loadCounts()
+      loadSubTaskCounts()
       return init()
     }
   }, [isQuickAdd])

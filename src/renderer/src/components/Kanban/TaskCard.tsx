@@ -5,6 +5,7 @@ import { format, parseISO, isPast, isToday, isTomorrow } from 'date-fns'
 import type { Task, TaskPriority, LabelNode } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
 import { useAttachmentCountStore } from '../../stores/attachmentCountStore'
+import { useSubTaskCountStore } from '../../stores/subTaskCountStore'
 import MentionText from '../shared/MentionText'
 
 const PRIORITY_COLOURS: Record<TaskPriority, string> = {
@@ -33,10 +34,12 @@ interface Props { task: Task; isDragging?: boolean; onOpen?: (task: Task) => voi
 export default function TaskCard({ task, isDragging, onOpen }: Props) {
   const { deleteTask, labels } = useTaskStore()
   const { counts, incrementCount } = useAttachmentCountStore()
+  const { counts: subCounts } = useSubTaskCountStore()
   const { attributes, listeners, setNodeRef, transform, isDragging: sorting } =
     useSortable({ id: task.id })
   const [fileDragging, setFileDragging] = useState(false)
   const attachCount = counts[task.id] ?? 0
+  const subCount = subCounts[task.id] ?? null
 
   const isBacklog = task.status === 'backlog'
   const style = { transform: CSS.Transform.toString(transform), opacity: sorting ? 0.35 : isBacklog ? 0.55 : 1 }
@@ -122,7 +125,7 @@ export default function TaskCard({ task, isDragging, onOpen }: Props) {
       )}
 
       {/* Footer row */}
-      {(due || task.linked_email_id || attachCount > 0) && (
+      {(due || task.linked_email_id || attachCount > 0 || subCount) && (
         <div className="flex items-center gap-2">
           {due && (
             <span className={`font-mono text-[10px] ${due.urgent ? 'text-[#FC2847]' : 'text-[#6b7280]'}`}>
@@ -131,6 +134,15 @@ export default function TaskCard({ task, isDragging, onOpen }: Props) {
           )}
           {task.linked_email_id && (
             <span className="font-mono text-[10px] text-[#4a9eca]">✉ linked</span>
+          )}
+          {subCount && (
+            <span className={`font-mono text-[10px] flex items-center gap-0.5 ${subCount.done === subCount.total ? 'text-[#4caf82]' : 'text-[#6b7280]'}`}>
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+                <circle cx="4.5" cy="4.5" r="4" stroke="currentColor" strokeWidth="0.9"/>
+                <path d="M3 4.5L4 5.5L6 3.5" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {subCount.done}/{subCount.total}
+            </span>
           )}
           {attachCount > 0 && (
             <span className="font-mono text-[10px] text-[#6b7280] flex items-center gap-0.5">

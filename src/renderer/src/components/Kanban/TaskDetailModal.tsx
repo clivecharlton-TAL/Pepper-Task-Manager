@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { Task, TaskPriority, TaskStatus, LabelNode, TaskAttachmentWithStatus } from '../../../../shared/types'
+import type { Task, TaskPriority, TaskStatus, LabelNode, TaskAttachmentWithStatus, SubTask } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
 import LabelTreeView from '../QuickAdd/LabelTreeView'
 import MentionPopover from '../shared/MentionPopover'
 import { TEAM_MEMBERS } from '../../../../shared/team'
+import { useSubTaskCountStore } from '../../stores/subTaskCountStore'
 
 // ── FY quarter helpers (FY starts 1 April) ───────────────────────────────────
 
@@ -90,6 +91,12 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [attachments,    setAttachments]    = useState<TaskAttachmentWithStatus[]>([])
   const [attachDragging, setAttachDragging] = useState(false)
   const [attachError,    setAttachError]    = useState('')
+  const [subTasks,       setSubTasks]       = useState<SubTask[]>([])
+  const [newSubTaskTitle, setNewSubTaskTitle] = useState('')
+  const [assignPickerId, setAssignPickerId] = useState<string | null>(null)
+  const assignPickerRef = useRef<HTMLDivElement>(null)
+  const newSubTaskRef   = useRef<HTMLInputElement>(null)
+  const { setCount: setSubTaskCount } = useSubTaskCountStore()
   const labelPickerRef   = useRef<HTMLDivElement>(null)
   const quarterPickerRef = useRef<HTMLDivElement>(null)
   const titleInputRef    = useRef<HTMLInputElement>(null)
@@ -279,6 +286,70 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const handleRemoveAttachment = async (id: string) => {
     await window.api.attachments.remove(id)
     setAttachments(prev => prev.filter(a => a.id !== id))
+  }
+
+  useEffect(() => {
+    window.api.subtasks.list(task.id).then(setSubTasks)
+  }, [task.id])
+
+  useEffect(() => {
+    if (!assignPickerId) return
+    const handler = (e: MouseEvent) => {
+      if (assignPickerRef.current && !assignPickerRef.current.contains(e.target as Node)) {
+        setAssignPickerId(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [assignPickerId])
+
+  const syncSubTaskCount = (updated: SubTask[]) => {
+    setSubTaskCount(task.id, {
+      done:  updated.filter(s => s.done).length,
+      total: updated.length,
+    })
+  }
+
+  const handleAddSubTask = async () => {
+    const title = newSubTaskTitle.trim()
+    if (!title) return
+    const st = await window.api.subtasks.create(task.id, title)
+    const updated = [...subTasks, st]
+    setSubTasks(updated)
+    syncSubTaskCount(updated)
+    setNewSubTaskTitle('')
+    newSubTaskRef.current?.focus()
+  }
+
+  const handleSubTaskToggle = async (id: string, done: boolean) => {
+    const result = await window.api.subtasks.update(id, { done })
+    if (!result) return
+    const updated = subTasks.map(s => s.id === id ? result : s)
+    setSubTasks(updated)
+    syncSubTaskCount(updated)
+  }
+
+  const handleSubTaskTitle = async (id: string, title: string) => {
+    setSubTasks(prev => prev.map(s => s.id === id ? { ...s, title } : s))
+    await window.api.subtasks.update(id, { title })
+  }
+
+  const handleSubTaskAssign = async (id: string, assigned: string | null) => {
+    const result = await window.api.subtasks.update(id, { assigned })
+    if (result) setSubTasks(prev => prev.map(s => s.id === id ? result : s))
+    setAssignPickerId(null)
+  }
+
+  const handleSubTaskDate = async (id: string, due_date: string | null) => {
+    const result = await window.api.subtasks.update(id, { due_date: due_date || null })
+    if (result) setSubTasks(prev => prev.map(s => s.id === id ? result : s))
+  }
+
+  const handleDeleteSubTask = async (id: string) => {
+    await window.api.subtasks.delete(id)
+    const updated = subTasks.filter(s => s.id !== id)
+    setSubTasks(updated)
+    syncSubTaskCount(updated)
   }
 
   const handleModalDragOver = (e: React.DragEvent) => {
@@ -789,6 +860,127 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                     <span className="font-mono text-[10px] text-[#3a3a3a]">Drop files here</span>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* Sub-tasks */}
+            <div className="flex items-start gap-4">
+              <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] w-20 pt-1 flex-shrink-0">Sub-tasks</span>
+              <div className="flex-1 space-y-1">
+
+                {subTasks.map(st => (
+                  <div key={st.id} className="group/st flex items-center gap-2">
+                    {/* Checkbox */}
+                    <button
+                      onMouseDown={e => e.stopPropagation()}
+                      onClick={() => handleSubTaskToggle(st.id, !st.done)}
+                      className="flex-shrink-0 transition-opacity hover:opacity-70"
+                    >
+                      {st.done ? (
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <circle cx="7" cy="7" r="6.5" fill="#4caf82"/>
+                          <path d="M4.5 7.2L6.2 9L9.5 5.5" stroke="#1c1c1e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <circle cx="7" cy="7" r="6.5" stroke="#3a3a3a" strokeWidth="1"/>
+                        </svg>
+                      )}
+                    </button>
+
+                    {/* Title */}
+                    <input
+                      value={st.title}
+                      onChange={e => handleSubTaskTitle(st.id, e.target.value)}
+                      onMouseDown={e => e.stopPropagation()}
+                      onKeyDown={e => e.stopPropagation()}
+                      className={`flex-1 bg-transparent font-mono text-[11px] focus:outline-none min-w-0 ${
+                        st.done ? 'line-through text-[#4a4a4a]' : 'text-[#d4d4d4]'
+                      }`}
+                    />
+
+                    {/* Assigned */}
+                    <div className="relative flex-shrink-0">
+                      <button
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={() => setAssignPickerId(assignPickerId === st.id ? null : st.id)}
+                        className={`font-mono text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                          st.assigned
+                            ? 'bg-[#4a9eca22] text-[#4a9eca]'
+                            : 'text-[#3a3a3a] hover:text-[#666666]'
+                        }`}
+                      >
+                        {st.assigned ? `@${st.assigned.split(' ')[0]}` : '@'}
+                      </button>
+                      {assignPickerId === st.id && (
+                        <div
+                          ref={assignPickerRef}
+                          className="absolute left-0 top-full mt-1 z-20 bg-[#1e1e1e] border border-[#383838] rounded-xl shadow-2xl overflow-y-auto"
+                          style={{ width: 200, maxHeight: 200 }}
+                          onMouseDown={e => e.stopPropagation()}
+                        >
+                          {st.assigned && (
+                            <button
+                              onClick={() => handleSubTaskAssign(st.id, null)}
+                              className="w-full text-left px-3 py-1.5 font-mono text-[10px] text-[#FC2847] hover:bg-[#2a2a2a] transition-colors"
+                            >
+                              Remove
+                            </button>
+                          )}
+                          {TEAM_MEMBERS.map(m => (
+                            <button
+                              key={m.name}
+                              onClick={() => handleSubTaskAssign(st.id, m.name)}
+                              className="w-full text-left px-3 py-1.5 font-mono text-[10px] text-[#d4d4d4] hover:bg-[#2a2a2a] transition-colors truncate"
+                            >
+                              {m.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Due date */}
+                    <input
+                      type="date"
+                      value={st.due_date ?? ''}
+                      onChange={e => handleSubTaskDate(st.id, e.target.value || null)}
+                      onMouseDown={e => e.stopPropagation()}
+                      className={`bg-transparent font-mono text-[10px] focus:outline-none flex-shrink-0 [color-scheme:dark] ${
+                        st.due_date ? 'text-[#888888]' : 'text-[#3a3a3a] w-4 cursor-pointer'
+                      }`}
+                      style={st.due_date ? {} : { colorScheme: 'dark' }}
+                      title={st.due_date ? undefined : 'Set due date'}
+                    />
+
+                    {/* Remove */}
+                    <button
+                      onMouseDown={e => e.stopPropagation()}
+                      onClick={() => handleDeleteSubTask(st.id)}
+                      className="font-mono text-[12px] text-transparent group-hover/st:text-[#333333] hover:!text-[#FC2847] transition-colors leading-none flex-shrink-0"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+
+                {/* Add new sub-task */}
+                <div className="flex items-center gap-2 pt-0.5">
+                  <div className="w-3.5 flex-shrink-0" />
+                  <input
+                    ref={newSubTaskRef}
+                    value={newSubTaskTitle}
+                    onChange={e => setNewSubTaskTitle(e.target.value)}
+                    onMouseDown={e => e.stopPropagation()}
+                    onKeyDown={e => {
+                      e.stopPropagation()
+                      if (e.key === 'Enter') handleAddSubTask()
+                    }}
+                    placeholder="+ Add sub-task"
+                    className="flex-1 bg-transparent font-mono text-[11px] text-[#555555] placeholder-[#3a3a3a] focus:outline-none focus:text-[#d4d4d4] focus:placeholder-[#555555] transition-colors"
+                  />
+                </div>
+
               </div>
             </div>
 

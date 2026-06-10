@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import initSqlJs, { Database } from 'sql.js'
-import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem, TaskAttachment, TaskAttachmentWithStatus } from '../shared/types'
+import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem, TaskAttachment, TaskAttachmentWithStatus, SubTask } from '../shared/types'
 
 const DB_PATH = join(app.getPath('userData'), 'tasks.db')
 
@@ -54,6 +54,17 @@ function migrate(db: Database): void {
       linked_email_subject TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS sub_tasks (
+      id         TEXT PRIMARY KEY,
+      task_id    TEXT NOT NULL,
+      title      TEXT NOT NULL,
+      done       INTEGER NOT NULL DEFAULT 0,
+      assigned   TEXT,
+      due_date   TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS task_attachments (
@@ -545,6 +556,67 @@ export async function removeAttachment(attachmentId: string): Promise<void> {
   const d = await getDb()
   run(d, 'DELETE FROM task_attachments WHERE id = ?', [attachmentId])
   save()
+}
+
+// ─── Sub-tasks ──────────────────────────────────────────────────────────────
+
+function parseSubTask(row: Record<string, unknown>): SubTask {
+  return { ...(row as Omit<SubTask, 'done'>), done: row.done === 1 }
+}
+
+export async function listSubTasks(taskId: string): Promise<SubTask[]> {
+  const d = await getDb()
+  return all<Record<string, unknown>>(d,
+    'SELECT * FROM sub_tasks WHERE task_id = ? ORDER BY sort_order ASC, created_at ASC', [taskId])
+    .map(parseSubTask)
+}
+
+export async function createSubTask(taskId: string, title: string): Promise<SubTask> {
+  const d = await getDb()
+  const count = (get<{ n: number }>(d, 'SELECT COUNT(*) as n FROM sub_tasks WHERE task_id = ?', [taskId])?.n ?? 0)
+  const st: SubTask = {
+    id: uuidv4(), task_id: taskId, title,
+    done: false, assigned: null, due_date: null,
+    sort_order: count, created_at: new Date().toISOString(),
+  }
+  run(d, 'INSERT INTO sub_tasks (id,task_id,title,done,assigned,due_date,sort_order,created_at) VALUES (?,?,?,?,?,?,?,?)',
+    [st.id, st.task_id, st.title, 0, null, null, st.sort_order, st.created_at])
+  save()
+  return st
+}
+
+export async function updateSubTask(id: string, patch: Partial<Pick<SubTask, 'title' | 'done' | 'assigned' | 'due_date' | 'sort_order'>>): Promise<SubTask | null> {
+  const d = await getDb()
+  const row = get<Record<string, unknown>>(d, 'SELECT * FROM sub_tasks WHERE id = ?', [id])
+  if (!row) return null
+  const current = parseSubTask(row)
+  const updated: SubTask = {
+    ...current,
+    title:      patch.title      !== undefined ? patch.title      : current.title,
+    done:       patch.done       !== undefined ? patch.done       : current.done,
+    assigned:   patch.assigned   !== undefined ? patch.assigned   : current.assigned,
+    due_date:   patch.due_date   !== undefined ? patch.due_date   : current.due_date,
+    sort_order: patch.sort_order !== undefined ? patch.sort_order : current.sort_order,
+  }
+  run(d, 'UPDATE sub_tasks SET title=?,done=?,assigned=?,due_date=?,sort_order=? WHERE id=?',
+    [updated.title, updated.done ? 1 : 0, updated.assigned, updated.due_date, updated.sort_order, id])
+  save()
+  return updated
+}
+
+export async function deleteSubTask(id: string): Promise<void> {
+  const d = await getDb()
+  run(d, 'DELETE FROM sub_tasks WHERE id = ?', [id])
+  save()
+}
+
+export async function countSubTasks(): Promise<Record<string, { done: number; total: number }>> {
+  const d = await getDb()
+  const rows = all<{ task_id: string; done: number; total: number }>(d,
+    'SELECT task_id, SUM(done) as done, COUNT(*) as total FROM sub_tasks GROUP BY task_id')
+  const result: Record<string, { done: number; total: number }> = {}
+  for (const r of rows) result[r.task_id] = { done: r.done, total: r.total }
+  return result
 }
 
 export async function countAttachments(): Promise<Record<string, number>> {

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus } from '../shared/types'
+import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask } from '../shared/types'
 
 const api = {
   tasks: {
@@ -16,6 +16,13 @@ const api = {
   },
   reports: {
     get: (rangeDays: number): Promise<ReportData> => ipcRenderer.invoke('reports:get', rangeDays)
+  },
+  subtasks: {
+    list:   (taskId: string): Promise<SubTask[]>                                              => ipcRenderer.invoke('subtasks:list', taskId),
+    create: (taskId: string, title: string): Promise<SubTask>                                 => ipcRenderer.invoke('subtasks:create', taskId, title),
+    update: (id: string, patch: Partial<Pick<SubTask, 'title' | 'done' | 'assigned' | 'due_date' | 'sort_order'>>): Promise<SubTask | null> => ipcRenderer.invoke('subtasks:update', id, patch),
+    delete: (id: string): Promise<void>                                                       => ipcRenderer.invoke('subtasks:delete', id),
+    counts: (): Promise<Record<string, { done: number; total: number }>>                      => ipcRenderer.invoke('subtasks:counts'),
   },
   attachments: {
     list:   (taskId: string): Promise<TaskAttachmentWithStatus[]>                              => ipcRenderer.invoke('attachments:list', taskId),

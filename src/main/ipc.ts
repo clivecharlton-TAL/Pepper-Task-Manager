@@ -1,7 +1,7 @@
 import { ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
-import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments } from './db'
+import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
 import { hasApiKey, saveApiKey, streamDraft } from './ai'
 import { broadcast } from './events'
@@ -52,6 +52,12 @@ export function registerIpcHandlers(): void {
       if (!event.sender.isDestroyed()) event.sender.send('ai:chunk', chunk)
     })
   })
+
+  ipcMain.handle('subtasks:list',   (_e, taskId: string) => listSubTasks(taskId))
+  ipcMain.handle('subtasks:create', (_e, taskId: string, title: string) => createSubTask(taskId, title))
+  ipcMain.handle('subtasks:update', (_e, id: string, patch: Parameters<typeof updateSubTask>[1]) => updateSubTask(id, patch))
+  ipcMain.handle('subtasks:delete', (_e, id: string) => deleteSubTask(id))
+  ipcMain.handle('subtasks:counts', () => countSubTasks())
 
   ipcMain.handle('attachments:list',   (_e, taskId: string) => listAttachments(taskId))
   ipcMain.handle('attachments:add',    (_e, taskId: string, filePath: string) => addAttachment(taskId, filePath))

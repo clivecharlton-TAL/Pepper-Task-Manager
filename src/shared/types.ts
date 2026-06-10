@@ -86,6 +86,17 @@ export interface CompletionTimeItem {
   colour: string
 }
 
+export interface SubTask {
+  id: string
+  task_id: string
+  title: string
+  done: boolean
+  assigned: string | null
+  due_date: string | null
+  sort_order: number
+  created_at: string
+}
+
 export interface TaskAttachment {
   id: string
   task_id: string
