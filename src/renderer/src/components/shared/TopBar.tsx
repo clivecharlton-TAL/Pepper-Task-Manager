@@ -83,7 +83,12 @@ function ListControl<T extends string>({
   )
 }
 
-export default function TopBar() {
+interface TopBarProps {
+  isAIChatOpen: boolean
+  onToggleAIChat: () => void
+}
+
+export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
   const {
     activeLabel, activeStatus, activePriority, activeDue,
     searchQuery, setSearchQuery,
@@ -220,6 +225,24 @@ export default function TopBar() {
           </svg>
         </button>
       </div>
+
+      {/* AI Chat toggle */}
+      <button
+        onClick={onToggleAIChat}
+        title="AI Assistant"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        className={`no-drag p-1.5 rounded transition-colors ${
+          isAIChatOpen
+            ? 'bg-[#383838] text-[#c45d2e]'
+            : 'text-[#555555] hover:text-[#a0a0a0]'
+        }`}
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="6.5" stroke="currentColor" strokeWidth="1.2"/>
+          <path d="M5 5.5C5 4.67 5.67 4 6.5 4H7.5C8.33 4 9 4.67 9 5.5C9 6.33 8.33 7 7.5 7H7V8.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+          <circle cx="7" cy="10" r="0.6" fill="currentColor"/>
+        </svg>
+      </button>
 
       {/* Search */}
       <div

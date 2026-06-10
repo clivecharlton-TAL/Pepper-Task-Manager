@@ -47,6 +47,13 @@ const api = {
       ipcRenderer.on('ai:chunk', wrapped)
       return () => ipcRenderer.removeListener('ai:chunk', wrapped)
     },
+    query: (messages: { role: 'user' | 'assistant'; content: string }[]): Promise<void> =>
+      ipcRenderer.invoke('ai:query', messages),
+    onQueryChunk: (fn: (chunk: string) => void): () => void => {
+      const wrapped = (_e: Electron.IpcRendererEvent, chunk: string) => fn(chunk)
+      ipcRenderer.on('ai:query-chunk', wrapped)
+      return () => ipcRenderer.removeListener('ai:query-chunk', wrapped)
+    },
   },
   window: {
     hideQuickAdd: () => ipcRenderer.send('quick-add:hide'),

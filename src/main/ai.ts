@@ -40,6 +40,36 @@ A clear 1–2 sentence explanation of what this task involves and why it matters
 
 Use clean markdown: headers (##), bullet points, and **bold** for emphasis where needed. Do not repeat the task title as a heading. Tailor the language to a senior engineering leadership context.`
 
+const QUERY_SYSTEM_PROMPT = (tasksJson: string) =>
+  `You are an AI assistant embedded in Pepper, a task management app. Answer questions about the user's tasks concisely and helpfully. Format responses in markdown where appropriate.
+
+Current task data (JSON):
+${tasksJson}`
+
+export async function streamQuery(
+  messages: { role: 'user' | 'assistant'; content: string }[],
+  tasksJson: string,
+  onChunk: (text: string) => void
+): Promise<void> {
+  const apiKey = readConfig().anthropicApiKey
+  if (!apiKey) throw new Error('NO_API_KEY')
+
+  const client = new Anthropic({ apiKey })
+  const stream = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2048,
+    stream: true,
+    system: QUERY_SYSTEM_PROMPT(tasksJson),
+    messages,
+  })
+
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      onChunk(event.delta.text)
+    }
+  }
+}
+
 export async function streamDraft(title: string, onChunk: (text: string) => void): Promise<void> {
   const apiKey = readConfig().anthropicApiKey
   if (!apiKey) throw new Error('NO_API_KEY')

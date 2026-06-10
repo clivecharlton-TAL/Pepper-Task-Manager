@@ -18,6 +18,7 @@ import ReportsView from './Reports/ReportsView'
 import FilesView from './Files/FilesView'
 import CalendarView from './Calendar/CalendarView'
 import TopBar from './shared/TopBar'
+import AIChatPanel from './AIChatPanel'
 import TaskCard from './Kanban/TaskCard'
 import { useTaskStore } from '../stores/taskStore'
 import { useSubTaskCountStore } from '../stores/subTaskCountStore'
@@ -40,6 +41,7 @@ export default function MainWindow() {
   const { viewMode, allTasks, updateTask, deleteTask } = useTaskStore()
   const { counts: subTaskCounts, setCount: setSubTaskCount } = useSubTaskCountStore()
   const [sidebarWidth, setSidebarWidth] = useState(208)
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false)
   const [draggingTask, setDraggingTask] = useState<Task | null>(null)
   const dragging = useRef(false)
   const startX = useRef(0)
@@ -131,7 +133,7 @@ export default function MainWindow() {
         />
 
         <div className="flex flex-col flex-1 min-w-0">
-          <TopBar />
+          <TopBar isAIChatOpen={isAIChatOpen} onToggleAIChat={() => setIsAIChatOpen(o => !o)} />
           {viewMode === 'kanban'   ? <KanbanBoard />   :
            viewMode === 'list'     ? <ListView />      :
            viewMode === 'reports'  ? <ReportsView />   :
@@ -139,6 +141,8 @@ export default function MainWindow() {
                                      <CalendarView />}
         </div>
       </div>
+
+      <AIChatPanel isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
 
       <DragOverlay>
         {draggingTask && <TaskCard task={draggingTask} isDragging />}

@@ -3,7 +3,7 @@ import { join } from 'path'
 import { homedir } from 'os'
 import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
-import { hasApiKey, saveApiKey, streamDraft } from './ai'
+import { hasApiKey, saveApiKey, streamDraft, streamQuery } from './ai'
 import { broadcast } from './events'
 import type { CreateTaskInput, UpdateTaskInput, TaskFilters } from '../shared/types'
 
@@ -50,6 +50,14 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('ai:draft', async (event, title: string) => {
     await streamDraft(title, (chunk) => {
       if (!event.sender.isDestroyed()) event.sender.send('ai:chunk', chunk)
+    })
+  })
+
+  ipcMain.handle('ai:query', async (event, messages: { role: 'user' | 'assistant'; content: string }[]) => {
+    const tasks = await getTasks()
+    const tasksJson = JSON.stringify(tasks)
+    await streamQuery(messages, tasksJson, (chunk) => {
+      if (!event.sender.isDestroyed()) event.sender.send('ai:query-chunk', chunk)
     })
   })
 
