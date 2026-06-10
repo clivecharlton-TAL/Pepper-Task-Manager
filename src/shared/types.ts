@@ -90,6 +90,7 @@ export interface SubTask {
   id: string
   task_id: string
   title: string
+  notes: string | null
   done: boolean
   assigned: string | null
   due_date: string | null

@@ -20,7 +20,7 @@ const api = {
   subtasks: {
     list:   (taskId: string): Promise<SubTask[]>                                              => ipcRenderer.invoke('subtasks:list', taskId),
     create: (taskId: string, title: string): Promise<SubTask>                                 => ipcRenderer.invoke('subtasks:create', taskId, title),
-    update: (id: string, patch: Partial<Pick<SubTask, 'title' | 'done' | 'assigned' | 'due_date' | 'sort_order'>>): Promise<SubTask | null> => ipcRenderer.invoke('subtasks:update', id, patch),
+    update: (id: string, patch: Partial<Pick<SubTask, 'title' | 'notes' | 'done' | 'assigned' | 'due_date' | 'sort_order'>>): Promise<SubTask | null> => ipcRenderer.invoke('subtasks:update', id, patch),
     delete: (id: string): Promise<void>                                                       => ipcRenderer.invoke('subtasks:delete', id),
     counts: (): Promise<Record<string, { done: number; total: number }>>                      => ipcRenderer.invoke('subtasks:counts'),
   },

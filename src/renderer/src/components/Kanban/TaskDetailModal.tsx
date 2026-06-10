@@ -8,6 +8,7 @@ import LabelTreeView from '../QuickAdd/LabelTreeView'
 import MentionPopover from '../shared/MentionPopover'
 import { TEAM_MEMBERS } from '../../../../shared/team'
 import { useSubTaskCountStore } from '../../stores/subTaskCountStore'
+import SubTaskDetailModal from './SubTaskDetailModal'
 
 // ── FY quarter helpers (FY starts 1 April) ───────────────────────────────────
 
@@ -91,9 +92,10 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [attachments,    setAttachments]    = useState<TaskAttachmentWithStatus[]>([])
   const [attachDragging, setAttachDragging] = useState(false)
   const [attachError,    setAttachError]    = useState('')
-  const [subTasks,       setSubTasks]       = useState<SubTask[]>([])
+  const [subTasks,        setSubTasks]        = useState<SubTask[]>([])
   const [newSubTaskTitle, setNewSubTaskTitle] = useState('')
-  const [assignPickerId, setAssignPickerId] = useState<string | null>(null)
+  const [assignPickerId,  setAssignPickerId]  = useState<string | null>(null)
+  const [openSubTask,     setOpenSubTask]     = useState<SubTask | null>(null)
   const assignPickerRef = useRef<HTMLDivElement>(null)
   const newSubTaskRef   = useRef<HTMLInputElement>(null)
   const { setCount: setSubTaskCount } = useSubTaskCountStore()
@@ -888,16 +890,16 @@ export default function TaskDetailModal({ task, onClose }: Props) {
                       )}
                     </button>
 
-                    {/* Title */}
-                    <input
-                      value={st.title}
-                      onChange={e => handleSubTaskTitle(st.id, e.target.value)}
+                    {/* Title — click to open detail */}
+                    <button
                       onMouseDown={e => e.stopPropagation()}
-                      onKeyDown={e => e.stopPropagation()}
-                      className={`flex-1 bg-transparent font-mono text-[11px] focus:outline-none min-w-0 ${
-                        st.done ? 'line-through text-[#4a4a4a]' : 'text-[#d4d4d4]'
+                      onClick={() => setOpenSubTask(st)}
+                      className={`flex-1 text-left font-mono text-[11px] min-w-0 truncate hover:underline transition-colors ${
+                        st.done ? 'line-through text-[#4a4a4a]' : 'text-[#d4d4d4] hover:text-[#f0f0f0]'
                       }`}
-                    />
+                    >
+                      {st.title}
+                    </button>
 
                     {/* Assigned */}
                     <div className="relative flex-shrink-0">
@@ -1010,6 +1012,17 @@ export default function TaskDetailModal({ task, onClose }: Props) {
           </button>
         </div>
       </div>
+
+      {openSubTask && (
+        <SubTaskDetailModal
+          subTask={openSubTask}
+          onClose={() => setOpenSubTask(null)}
+          onChange={updated => {
+            setSubTasks(prev => prev.map(s => s.id === updated.id ? updated : s))
+            setOpenSubTask(updated)
+          }}
+        />
+      )}
     </div>
   )
 }

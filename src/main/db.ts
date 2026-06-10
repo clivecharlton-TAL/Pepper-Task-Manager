@@ -87,6 +87,7 @@ function migrate(db: Database): void {
 
   // Migration: add assigned column to existing databases
   try { db.run(`ALTER TABLE tasks ADD COLUMN assigned TEXT NOT NULL DEFAULT '[]'`) } catch { /* column already exists */ }
+  try { db.run(`ALTER TABLE sub_tasks ADD COLUMN notes TEXT`) } catch { /* column already exists */ }
 
   seedLabels(db)
   seedCrossCuttingLabels(db)
@@ -561,7 +562,7 @@ export async function removeAttachment(attachmentId: string): Promise<void> {
 // ─── Sub-tasks ──────────────────────────────────────────────────────────────
 
 function parseSubTask(row: Record<string, unknown>): SubTask {
-  return { ...(row as Omit<SubTask, 'done'>), done: row.done === 1 }
+  return { ...(row as Omit<SubTask, 'done' | 'notes'>), notes: (row.notes as string | null) ?? null, done: row.done === 1 }
 }
 
 export async function listSubTasks(taskId: string): Promise<SubTask[]> {
@@ -575,17 +576,17 @@ export async function createSubTask(taskId: string, title: string): Promise<SubT
   const d = await getDb()
   const count = (get<{ n: number }>(d, 'SELECT COUNT(*) as n FROM sub_tasks WHERE task_id = ?', [taskId])?.n ?? 0)
   const st: SubTask = {
-    id: uuidv4(), task_id: taskId, title,
+    id: uuidv4(), task_id: taskId, title, notes: null,
     done: false, assigned: null, due_date: null,
     sort_order: count, created_at: new Date().toISOString(),
   }
-  run(d, 'INSERT INTO sub_tasks (id,task_id,title,done,assigned,due_date,sort_order,created_at) VALUES (?,?,?,?,?,?,?,?)',
-    [st.id, st.task_id, st.title, 0, null, null, st.sort_order, st.created_at])
+  run(d, 'INSERT INTO sub_tasks (id,task_id,title,notes,done,assigned,due_date,sort_order,created_at) VALUES (?,?,?,?,?,?,?,?,?)',
+    [st.id, st.task_id, st.title, null, 0, null, null, st.sort_order, st.created_at])
   save()
   return st
 }
 
-export async function updateSubTask(id: string, patch: Partial<Pick<SubTask, 'title' | 'done' | 'assigned' | 'due_date' | 'sort_order'>>): Promise<SubTask | null> {
+export async function updateSubTask(id: string, patch: Partial<Pick<SubTask, 'title' | 'notes' | 'done' | 'assigned' | 'due_date' | 'sort_order'>>): Promise<SubTask | null> {
   const d = await getDb()
   const row = get<Record<string, unknown>>(d, 'SELECT * FROM sub_tasks WHERE id = ?', [id])
   if (!row) return null
@@ -593,13 +594,14 @@ export async function updateSubTask(id: string, patch: Partial<Pick<SubTask, 'ti
   const updated: SubTask = {
     ...current,
     title:      patch.title      !== undefined ? patch.title      : current.title,
+    notes:      patch.notes      !== undefined ? patch.notes      : current.notes,
     done:       patch.done       !== undefined ? patch.done       : current.done,
     assigned:   patch.assigned   !== undefined ? patch.assigned   : current.assigned,
     due_date:   patch.due_date   !== undefined ? patch.due_date   : current.due_date,
     sort_order: patch.sort_order !== undefined ? patch.sort_order : current.sort_order,
   }
-  run(d, 'UPDATE sub_tasks SET title=?,done=?,assigned=?,due_date=?,sort_order=? WHERE id=?',
-    [updated.title, updated.done ? 1 : 0, updated.assigned, updated.due_date, updated.sort_order, id])
+  run(d, 'UPDATE sub_tasks SET title=?,notes=?,done=?,assigned=?,due_date=?,sort_order=? WHERE id=?',
+    [updated.title, updated.notes, updated.done ? 1 : 0, updated.assigned, updated.due_date, updated.sort_order, id])
   save()
   return updated
 }
