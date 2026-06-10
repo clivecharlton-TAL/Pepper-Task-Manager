@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
+import { useDroppable, useDndContext } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { format, parseISO, isPast, isToday, isTomorrow } from 'date-fns'
 import type { Task, TaskPriority, LabelNode } from '../../../../shared/types'
@@ -37,9 +38,13 @@ export default function TaskCard({ task, isDragging, onOpen }: Props) {
   const { counts: subCounts } = useSubTaskCountStore()
   const { attributes, listeners, setNodeRef, transform, isDragging: sorting } =
     useSortable({ id: task.id })
+  const { setNodeRef: setSubtaskRef, isOver: isSubtaskOver } =
+    useDroppable({ id: `subtask-of-${task.id}` })
+  const { active } = useDndContext()
   const [fileDragging, setFileDragging] = useState(false)
   const attachCount = counts[task.id] ?? 0
   const subCount = subCounts[task.id] ?? null
+  const showSubtaskZone = active !== null && active.id !== task.id
 
   const isBacklog = task.status === 'backlog'
   const style = { transform: CSS.Transform.toString(transform), opacity: sorting ? 0.35 : isBacklog ? 0.55 : 1 }
@@ -163,6 +168,22 @@ export default function TaskCard({ task, isDragging, onOpen }: Props) {
       >
         ×
       </button>
+
+      {/* Sub-task drop zone — appears at bottom during any drag */}
+      {showSubtaskZone && (
+        <div
+          ref={setSubtaskRef}
+          className={`absolute bottom-0 left-0 right-0 h-7 rounded-b flex items-center justify-center transition-all ${
+            isSubtaskOver
+              ? 'bg-[#c45d2e]/25 border-t border-[#c45d2e]/60'
+              : 'bg-[#1c1c1e]/60 border-t border-[#2e2e2e]'
+          }`}
+        >
+          <span className={`font-mono text-[9px] transition-colors ${isSubtaskOver ? 'text-[#c45d2e]' : 'text-[#3a3a3a]'}`}>
+            {isSubtaskOver ? '↓ make sub-task' : '· · ·'}
+          </span>
+        </div>
+      )}
     </div>
   )
 }

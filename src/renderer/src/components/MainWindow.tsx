@@ -20,6 +20,7 @@ import CalendarView from './Calendar/CalendarView'
 import TopBar from './shared/TopBar'
 import TaskCard from './Kanban/TaskCard'
 import { useTaskStore } from '../stores/taskStore'
+import { useSubTaskCountStore } from '../stores/subTaskCountStore'
 import { KANBAN_COLUMNS, type Task, type TaskStatus } from '../../../shared/types'
 
 const MIN_WIDTH = 160
@@ -27,11 +28,17 @@ const MAX_WIDTH = 400
 
 const appCollision: CollisionDetection = (args) => {
   const hits = pointerWithin(args)
-  return hits.length > 0 ? hits : rectIntersection(args)
+  if (hits.length > 0) {
+    const subtaskHit = hits.find(h => String(h.id).startsWith('subtask-of-'))
+    if (subtaskHit) return [subtaskHit]
+    return hits
+  }
+  return rectIntersection(args)
 }
 
 export default function MainWindow() {
-  const { viewMode, allTasks, updateTask } = useTaskStore()
+  const { viewMode, allTasks, updateTask, deleteTask } = useTaskStore()
+  const { counts: subTaskCounts, setCount: setSubTaskCount } = useSubTaskCountStore()
   const [sidebarWidth, setSidebarWidth] = useState(208)
   const [draggingTask, setDraggingTask] = useState<Task | null>(null)
   const dragging = useRef(false)
@@ -44,7 +51,7 @@ export default function MainWindow() {
     setDraggingTask(allTasks.find(t => t.id === active.id) ?? null)
   }
 
-  const onDragEnd = ({ active, over }: DragEndEvent) => {
+  const onDragEnd = async ({ active, over }: DragEndEvent) => {
     setDraggingTask(null)
     if (!over) return
     const taskId = active.id as string
@@ -57,6 +64,18 @@ export default function MainWindow() {
       if (task && !task.labels.includes(labelId)) {
         updateTask({ id: taskId, labels: [...task.labels, labelId] })
       }
+      return
+    }
+
+    // Dropped on a sub-task zone — convert task into a sub-task of the target
+    if (overId.startsWith('subtask-of-')) {
+      const parentId = overId.slice('subtask-of-'.length)
+      const task = allTasks.find(t => t.id === taskId)
+      if (!task || parentId === taskId) return
+      await window.api.subtasks.create(parentId, task.title)
+      deleteTask(taskId)
+      const current = subTaskCounts[parentId] ?? { done: 0, total: 0 }
+      setSubTaskCount(parentId, { done: current.done, total: current.total + 1 })
       return
     }
 
