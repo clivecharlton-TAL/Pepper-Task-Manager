@@ -40,7 +40,7 @@ const appCollision: CollisionDetection = (args) => {
 export default function MainWindow() {
   const { viewMode, allTasks, updateTask, deleteTask } = useTaskStore()
   const { counts: subTaskCounts, setCount: setSubTaskCount } = useSubTaskCountStore()
-  const [sidebarWidth, setSidebarWidth] = useState(208)
+  const [sidebarWidth, setSidebarWidth] = useState(280)
   const [isAIChatOpen, setIsAIChatOpen] = useState(false)
   const [draggingTask, setDraggingTask] = useState<Task | null>(null)
   const dragging = useRef(false)
