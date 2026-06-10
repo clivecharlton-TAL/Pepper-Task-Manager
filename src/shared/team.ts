@@ -4,6 +4,8 @@ export interface TeamMember {
 }
 
 export const TEAM_MEMBERS: TeamMember[] = [
+  // CTO
+  { name: 'Clive Charlton',    role: 'CTO' },
   // CTO direct reports
   { name: 'Filipe Teixeira',   role: 'Sr Eng Director, Group Fulfilment' },
   { name: 'Mario De Freitas',  role: 'Eng Director, Storefront' },
