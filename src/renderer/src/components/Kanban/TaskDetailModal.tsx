@@ -94,9 +94,8 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [attachError,    setAttachError]    = useState('')
   const [subTasks,        setSubTasks]        = useState<SubTask[]>([])
   const [newSubTaskTitle, setNewSubTaskTitle] = useState('')
-  const [assignPickerId,  setAssignPickerId]  = useState<string | null>(null)
+  const [rowMention,      setRowMention]      = useState<{ id: string; query: string; highlight: number; rect: DOMRect | null } | null>(null)
   const [openSubTask,     setOpenSubTask]     = useState<SubTask | null>(null)
-  const assignPickerRef = useRef<HTMLDivElement>(null)
   const newSubTaskRef   = useRef<HTMLInputElement>(null)
   const { setCount: setSubTaskCount } = useSubTaskCountStore()
   const labelPickerRef   = useRef<HTMLDivElement>(null)
@@ -294,16 +293,6 @@ export default function TaskDetailModal({ task, onClose }: Props) {
     window.api.subtasks.list(task.id).then(setSubTasks)
   }, [task.id])
 
-  useEffect(() => {
-    if (!assignPickerId) return
-    const handler = (e: MouseEvent) => {
-      if (assignPickerRef.current && !assignPickerRef.current.contains(e.target as Node)) {
-        setAssignPickerId(null)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [assignPickerId])
 
   const syncSubTaskCount = (updated: SubTask[]) => {
     setSubTaskCount(task.id, {
@@ -903,42 +892,54 @@ export default function TaskDetailModal({ task, onClose }: Props) {
 
                     {/* Assigned */}
                     <div className="relative flex-shrink-0">
-                      <button
-                        onMouseDown={e => e.stopPropagation()}
-                        onClick={() => setAssignPickerId(assignPickerId === st.id ? null : st.id)}
-                        className={`font-mono text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
-                          st.assigned
-                            ? 'border-[#4a9eca44] bg-[#4a9eca11] text-[#4a9eca]'
-                            : 'border-[#383838] text-[#666666] hover:border-[#555555] hover:text-[#999999]'
-                        }`}
-                      >
-                        {st.assigned ? `@${st.assigned.split(' ')[0]}` : '@'}
-                      </button>
-                      {assignPickerId === st.id && (
-                        <div
-                          ref={assignPickerRef}
-                          className="absolute left-0 top-full mt-1 z-20 bg-[#1e1e1e] border border-[#383838] rounded-xl shadow-2xl overflow-y-auto"
-                          style={{ width: 200, maxHeight: 200 }}
-                          onMouseDown={e => e.stopPropagation()}
+                      {st.assigned ? (
+                        <span
+                          className="font-mono text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 flex-shrink-0"
+                          style={{ backgroundColor: '#4a9eca22', color: '#4a9eca' }}
                         >
-                          {st.assigned && (
-                            <button
-                              onClick={() => handleSubTaskAssign(st.id, null)}
-                              className="w-full text-left px-3 py-1.5 font-mono text-[10px] text-[#FC2847] hover:bg-[#2a2a2a] transition-colors"
-                            >
-                              Remove
-                            </button>
-                          )}
-                          {TEAM_MEMBERS.map(m => (
-                            <button
-                              key={m.name}
-                              onClick={() => handleSubTaskAssign(st.id, m.name)}
-                              className="w-full text-left px-3 py-1.5 font-mono text-[10px] text-[#d4d4d4] hover:bg-[#2a2a2a] transition-colors truncate"
-                            >
-                              {m.name}
-                            </button>
-                          ))}
-                        </div>
+                          @{st.assigned.split(' ')[0]}
+                          <button
+                            onMouseDown={e => e.stopPropagation()}
+                            onClick={() => handleSubTaskAssign(st.id, null)}
+                            className="opacity-50 hover:opacity-100 transition-opacity leading-none"
+                          >×</button>
+                        </span>
+                      ) : (
+                        <input
+                          value={rowMention?.id === st.id ? `@${rowMention.query}` : ''}
+                          onChange={e => {
+                            const val = e.target.value
+                            const query = val.startsWith('@') ? val.slice(1) : val
+                            setRowMention({ id: st.id, query, highlight: 0, rect: (e.target as HTMLInputElement).getBoundingClientRect() })
+                          }}
+                          onKeyDown={e => {
+                            e.stopPropagation()
+                            if (!rowMention || rowMention.id !== st.id) return
+                            const members = TEAM_MEMBERS.filter(m => m.name.toLowerCase().includes(rowMention.query.toLowerCase()))
+                            if (e.key === 'ArrowDown') { e.preventDefault(); setRowMention(r => r ? { ...r, highlight: Math.min(r.highlight + 1, members.length - 1) } : r) }
+                            if (e.key === 'ArrowUp')   { e.preventDefault(); setRowMention(r => r ? { ...r, highlight: Math.max(r.highlight - 1, 0) } : r) }
+                            if (e.key === 'Enter' && members[rowMention.highlight]) {
+                              e.preventDefault()
+                              handleSubTaskAssign(st.id, members[rowMention.highlight].name)
+                              setRowMention(null)
+                            }
+                            if (e.key === 'Escape') setRowMention(null)
+                          }}
+                          onFocus={e => setRowMention({ id: st.id, query: '', highlight: 0, rect: e.target.getBoundingClientRect() })}
+                          onBlur={() => setTimeout(() => setRowMention(null), 150)}
+                          onMouseDown={e => e.stopPropagation()}
+                          placeholder="@"
+                          className="w-8 bg-transparent font-mono text-[10px] text-[#666666] placeholder-[#444444] focus:outline-none focus:text-[#4a9eca] focus:w-20 transition-all"
+                        />
+                      )}
+                      {rowMention?.id === st.id && rowMention.rect && (
+                        <MentionPopover
+                          query={rowMention.query}
+                          highlight={rowMention.highlight}
+                          anchorRect={rowMention.rect}
+                          onSelect={name => { handleSubTaskAssign(st.id, name); setRowMention(null) }}
+                          onClose={() => setRowMention(null)}
+                        />
                       )}
                     </div>
 

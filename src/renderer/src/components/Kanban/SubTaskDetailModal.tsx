@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { SubTask, TaskAttachmentWithStatus } from '../../../../shared/types'
 import { TEAM_MEMBERS } from '../../../../shared/team'
+import MentionPopover from '../shared/MentionPopover'
 
 function currentFY(): number {
   const now = new Date()
@@ -49,10 +50,12 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
   const [aiError,       setAiError]       = useState('')
   const [showKeyInput,  setShowKeyInput]  = useState(false)
   const [keyInput,      setKeyInput]      = useState('')
-  const [showQuarters,  setShowQuarters]  = useState(false)
-  const pickerRef      = useRef<HTMLDivElement>(null)
+  const [showQuarters,   setShowQuarters]   = useState(false)
+  const [assignInput,    setAssignInput]    = useState('')
+  const [assignMention,  setAssignMention]  = useState<{ active: boolean; query: string; highlight: number; rect: DOMRect | null }>({ active: false, query: '', highlight: 0, rect: null })
+  const assignInputRef   = useRef<HTMLInputElement>(null)
   const quarterPickerRef = useRef<HTMLDivElement>(null)
-  const saveRef        = useRef<() => void>(() => {})
+  const saveRef          = useRef<() => void>(() => {})
 
   const isDirty =
     title.trim() !== subTask.title ||
@@ -316,47 +319,66 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
           <div className="h-px bg-[#2e2e2e]" />
 
           {/* Assigned */}
-          <div className="flex items-center gap-4">
-            <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] w-20 flex-shrink-0">Assigned</span>
-            <div className="relative">
-              <button
-                onMouseDown={e => e.stopPropagation()}
-                onClick={() => setShowPicker(v => !v)}
-                className={`font-mono text-[10px] px-2 py-0.5 rounded border transition-colors ${
-                  assigned
-                    ? 'border-[#4a9eca44] bg-[#4a9eca11] text-[#4a9eca]'
-                    : 'border-[#383838] text-[#666666] hover:border-[#555555] hover:text-[#999999]'
-                }`}
-              >
-                {assigned ? `@${assigned}` : '@ Assign'}
-              </button>
-              {showPicker && (
-                <div
-                  ref={pickerRef}
-                  className="absolute left-0 top-full mt-1 z-20 bg-[#1e1e1e] border border-[#383838] rounded-xl shadow-2xl overflow-y-auto"
-                  style={{ width: 220, maxHeight: 220 }}
-                  onMouseDown={e => e.stopPropagation()}
-                >
-                  {assigned && (
+          <div className="flex items-start gap-4">
+            <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] w-20 pt-1 flex-shrink-0">Assigned</span>
+            <div className="flex-1">
+              <div className="flex flex-wrap gap-1.5 items-center">
+                {assigned && (
+                  <span className="font-mono text-[10px] tracking-wide px-2 py-0.5 rounded flex items-center gap-1" style={{ backgroundColor: '#4a9eca22', color: '#4a9eca' }}>
+                    @{assigned}
                     <button
-                      onClick={() => { setAssigned(null); setShowPicker(false) }}
-                      className="w-full text-left px-3 py-1.5 font-mono text-[10px] text-[#FC2847] hover:bg-[#2a2a2a] transition-colors"
-                    >
-                      Remove
-                    </button>
+                      onMouseDown={e => e.stopPropagation()}
+                      onClick={() => setAssigned(null)}
+                      className="opacity-50 hover:opacity-100 transition-opacity leading-none ml-0.5"
+                    >×</button>
+                  </span>
+                )}
+                <div className="relative">
+                  <input
+                    ref={assignInputRef}
+                    value={assignInput}
+                    onChange={e => {
+                      const val = e.target.value
+                      setAssignInput(val)
+                      if (val.startsWith('@')) {
+                        setAssignMention({ active: true, query: val.slice(1), highlight: 0, rect: assignInputRef.current?.getBoundingClientRect() ?? null })
+                      } else {
+                        setAssignMention(m => ({ ...m, active: false }))
+                      }
+                    }}
+                    onKeyDown={e => {
+                      e.stopPropagation()
+                      if (e.key === '@') {
+                        setAssignMention({ active: true, query: '', highlight: 0, rect: assignInputRef.current?.getBoundingClientRect() ?? null })
+                      }
+                      if (assignMention.active) {
+                        const members = TEAM_MEMBERS.filter(m => m.name.toLowerCase().includes(assignMention.query.toLowerCase()))
+                        if (e.key === 'ArrowDown') { e.preventDefault(); setAssignMention(m => ({ ...m, highlight: Math.min(m.highlight + 1, members.length - 1) })) }
+                        if (e.key === 'ArrowUp')   { e.preventDefault(); setAssignMention(m => ({ ...m, highlight: Math.max(m.highlight - 1, 0) })) }
+                        if (e.key === 'Enter' && members[assignMention.highlight]) {
+                          e.preventDefault()
+                          setAssigned(members[assignMention.highlight].name)
+                          setAssignInput('')
+                          setAssignMention({ active: false, query: '', highlight: 0, rect: null })
+                        }
+                        if (e.key === 'Escape') setAssignMention({ active: false, query: '', highlight: 0, rect: null })
+                      }
+                    }}
+                    placeholder="@ to assign…"
+                    className="bg-transparent font-mono text-[10px] text-[#d4d4d4] placeholder-[#444444] focus:outline-none"
+                    style={{ minWidth: 100 }}
+                  />
+                  {assignMention.active && assignMention.rect && (
+                    <MentionPopover
+                      query={assignMention.query}
+                      highlight={assignMention.highlight}
+                      anchorRect={assignMention.rect}
+                      onSelect={name => { setAssigned(name); setAssignInput(''); setAssignMention({ active: false, query: '', highlight: 0, rect: null }) }}
+                      onClose={() => setAssignMention({ active: false, query: '', highlight: 0, rect: null })}
+                    />
                   )}
-                  {TEAM_MEMBERS.map(m => (
-                    <button
-                      key={m.name}
-                      onClick={() => { setAssigned(m.name); setShowPicker(false) }}
-                      className="w-full text-left px-3 py-1.5 font-mono text-[10px] text-[#d4d4d4] hover:bg-[#2a2a2a] transition-colors"
-                    >
-                      <span className="block truncate">{m.name}</span>
-                      <span className="block truncate text-[#555555]">{m.role}</span>
-                    </button>
-                  ))}
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
