@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem } from '../../../../shared/types'
+import { useTaskStore } from '../../stores/taskStore'
 
 const RANGE_OPTIONS = [
   { label: '7d',  value: 7  },
@@ -160,7 +161,7 @@ function CompletionTimeSection({ byPriority, byLabel }: { byPriority: Completion
   )
 }
 
-function LabelBreakdownTable({ data }: { data: LabelBreakdownItem[] }) {
+function LabelBreakdownTable({ data, onLabelClick }: { data: LabelBreakdownItem[]; onLabelClick: (labelId: string) => void }) {
   if (data.length === 0) return <p className="font-mono text-[11px] text-[#3a3a3a]">No tasks</p>
   return (
     <div className="overflow-x-auto">
@@ -180,10 +181,14 @@ function LabelBreakdownTable({ data }: { data: LabelBreakdownItem[] }) {
           {data.map(row => (
             <tr key={row.label} className="border-t border-[#272727] hover:bg-[#242424] transition-colors">
               <td className="py-2 pr-3">
-                <span className="flex items-center gap-2">
+                <button
+                  onClick={() => onLabelClick(row.label)}
+                  className="flex items-center gap-2 hover:underline text-left"
+                >
                   <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: row.colour }} />
                   <span className="text-[#c0c0c0] truncate max-w-[200px]">{row.label}</span>
-                </span>
+                  <span className="text-[#3a3a3a] text-[9px]">↗</span>
+                </button>
               </td>
               <td className="text-right px-3 text-[#888888]">{row.total}</td>
               <td className="text-right px-3" style={{ color: '#4caf82' }}>{row.done}</td>
@@ -202,6 +207,7 @@ function LabelBreakdownTable({ data }: { data: LabelBreakdownItem[] }) {
 }
 
 export default function ReportsView() {
+  const { navigateToLabel } = useTaskStore()
   const [range, setRange] = useState(30)
   const [data, setData] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -261,7 +267,7 @@ export default function ReportsView() {
             </div>
 
             <Section title="Label Breakdown">
-              <LabelBreakdownTable data={data.labelBreakdown} />
+              <LabelBreakdownTable data={data.labelBreakdown} onLabelClick={navigateToLabel} />
             </Section>
           </>
         )}

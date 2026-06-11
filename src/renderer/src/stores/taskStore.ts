@@ -16,6 +16,7 @@ interface TaskStore {
   activeDue: DueFilter | null
   searchQuery: string
   viewMode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar'
+  lastTaskViewMode: 'kanban' | 'list'
   listSort: ListSort
   listGroup: ListGroup
 
@@ -33,6 +34,7 @@ interface TaskStore {
   setActiveDue: (due: DueFilter | null) => void
   setSearchQuery: (q: string) => void
   setViewMode: (mode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar') => void
+  navigateToLabel: (labelId: string) => void
   setListSort: (sort: ListSort) => void
   setListGroup: (group: ListGroup) => void
 }
@@ -85,6 +87,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   activeDue: null,
   searchQuery: '',
   viewMode: 'kanban',
+  lastTaskViewMode: 'kanban',
   listSort: 'due',
   listGroup: 'none',
 
@@ -148,7 +151,15 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   setActiveDue: (due) => set({ activeDue: due }),
 
   setSearchQuery: (q) => set({ searchQuery: q }),
-  setViewMode: (mode) => set({ viewMode: mode }),
+  setViewMode: (mode) => set(s => ({
+    viewMode: mode,
+    lastTaskViewMode: (mode === 'kanban' || mode === 'list') ? mode : s.lastTaskViewMode,
+  })),
+  navigateToLabel: (labelId) => {
+    const { lastTaskViewMode } = get()
+    set({ activeLabel: labelId, viewMode: lastTaskViewMode })
+    get().loadTasks()
+  },
   setListSort: (sort) => set({ listSort: sort }),
   setListGroup: (group) => set({ listGroup: group }),
 }))
