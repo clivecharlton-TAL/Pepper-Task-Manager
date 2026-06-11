@@ -1,7 +1,7 @@
 import { ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
-import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks } from './db'
+import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
 import { hasApiKey, saveApiKey, streamDraft, streamQuery } from './ai'
 import { broadcast } from './events'
@@ -73,6 +73,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('attachments:counts', () => countAttachments())
   ipcMain.handle('attachments:open',   (_e, filePath: string) => shell.openPath(filePath))
   ipcMain.handle('attachments:reveal', (_e, filePath: string) => { shell.showItemInFolder(filePath); return null })
+
+  ipcMain.handle('links:list',   (_e, taskId: string) => listLinks(taskId))
+  ipcMain.handle('links:add',    (_e, taskId: string, url: string, name: string) => addLink(taskId, url, name))
+  ipcMain.handle('links:remove', (_e, id: string) => removeLink(id))
+  ipcMain.handle('links:open',   (_e, url: string) => shell.openExternal(url))
 
   ipcMain.handle('files:list', (_e, relativePath: string) => listFiles(relativePath))
   ipcMain.handle('files:open', (_e, relativePath: string) => openFile(relativePath))

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { format, parseISO } from 'date-fns'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { SubTask, TaskAttachmentWithStatus } from '../../../../shared/types'
+import type { SubTask, TaskAttachmentWithStatus, TaskLink } from '../../../../shared/types'
 import { TEAM_MEMBERS } from '../../../../shared/team'
 import MentionPopover from '../shared/MentionPopover'
 
@@ -46,6 +46,10 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
   const [attachments,   setAttachments]   = useState<TaskAttachmentWithStatus[]>([])
   const [attachDragging, setAttachDragging] = useState(false)
   const [attachError,   setAttachError]   = useState('')
+  const [links,          setLinks]          = useState<TaskLink[]>([])
+  const [showLinkInput,  setShowLinkInput]  = useState(false)
+  const [linkInput,      setLinkInput]      = useState('')
+  const linkInputRef = useRef<HTMLInputElement>(null)
   const [aiState,       setAiState]       = useState<'idle' | 'drafting' | 'error'>('idle')
   const [aiError,       setAiError]       = useState('')
   const [showKeyInput,  setShowKeyInput]  = useState(false)
@@ -102,7 +106,40 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
 
   useEffect(() => {
     window.api.attachments.list(subTask.task_id).then(setAttachments)
+    window.api.links.list(subTask.task_id).then(setLinks)
   }, [subTask.task_id])
+
+  const autoLinkName = (url: string): string => {
+    try {
+      const u = new URL(url)
+      if (u.hostname.includes('docs.google.com')) {
+        if (u.pathname.includes('/presentation')) return 'Google Slides'
+        if (u.pathname.includes('/spreadsheets')) return 'Google Sheets'
+        if (u.pathname.includes('/forms')) return 'Google Form'
+        if (u.pathname.includes('/drawings')) return 'Google Drawing'
+        return 'Google Doc'
+      }
+      if (u.hostname.includes('drive.google.com')) return 'Google Drive'
+      return u.hostname.replace(/^www\./, '')
+    } catch {
+      return url.length > 40 ? url.slice(0, 37) + '…' : url
+    }
+  }
+
+  const handleAddLink = async (url: string) => {
+    const trimmed = url.trim()
+    if (!trimmed) return
+    const withScheme = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`
+    const result = await window.api.links.add(subTask.task_id, withScheme, autoLinkName(withScheme))
+    if ('error' in result) { setAttachError(result.error); setTimeout(() => setAttachError(''), 3000); return }
+    setLinks(prev => [...prev.filter(l => l.id !== result.id), result])
+    setLinkInput('')
+    setShowLinkInput(false)
+  }
+
+  useEffect(() => {
+    if (showLinkInput) setTimeout(() => linkInputRef.current?.focus(), 50)
+  }, [showLinkInput])
 
   const handleAttachFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -148,7 +185,9 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
   }
 
   const handleModalDragOver = (e: React.DragEvent) => {
-    if (!e.dataTransfer.types.includes('Files')) return
+    const hasFiles = e.dataTransfer.types.includes('Files')
+    const hasUri   = e.dataTransfer.types.includes('text/uri-list') || e.dataTransfer.types.includes('text/plain')
+    if (!hasFiles && !hasUri) return
     e.preventDefault()
     setAttachDragging(true)
   }
@@ -160,10 +199,14 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
   }
 
   const handleModalDrop = (e: React.DragEvent) => {
-    if (!e.dataTransfer.types.includes('Files')) return
     e.preventDefault()
     setAttachDragging(false)
-    handleAttachFiles(e.dataTransfer.files)
+    if (e.dataTransfer.types.includes('Files') && e.dataTransfer.files.length > 0) {
+      handleAttachFiles(e.dataTransfer.files)
+      return
+    }
+    const uri = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain')
+    if (uri && uri.startsWith('http')) handleAddLink(uri.split('\n')[0].trim())
   }
 
   return (
@@ -382,7 +425,7 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
             </div>
           </div>
 
-          {/* Files */}
+          {/* Files + Links */}
           <div className="flex items-start gap-4">
             <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] w-20 pt-1 flex-shrink-0">Files</span>
             <div
@@ -414,13 +457,48 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
                       onMouseDown={e => e.stopPropagation()}
                       onClick={e => { e.stopPropagation(); window.api.attachments.remove(a.id); setAttachments(prev => prev.filter(x => x.id !== a.id)) }}
                       className="opacity-50 hover:opacity-100 transition-opacity leading-none ml-0.5 hover:text-[#FC2847]"
-                    >
-                      ×
-                    </button>
+                    >×</button>
                   </span>
                 ))}
-                {attachments.length === 0 && !attachDragging && (
-                  <span className="font-mono text-[10px] text-[#3a3a3a]">Drop files here</span>
+                {links.map(l => (
+                  <span
+                    key={l.id}
+                    className="font-mono text-[10px] px-2 py-0.5 rounded flex items-center gap-1 bg-[#1a2a3a] text-[#4a9eca] hover:text-[#7ab8e0] cursor-pointer"
+                    onClick={() => window.api.links.open(l.url)}
+                    title={l.url}
+                  >
+                    <SubLinkIcon url={l.url} />
+                    <span className="max-w-[140px] truncate">{l.name}</span>
+                    <button
+                      onMouseDown={e => e.stopPropagation()}
+                      onClick={e => { e.stopPropagation(); window.api.links.remove(l.id); setLinks(prev => prev.filter(x => x.id !== l.id)) }}
+                      className="opacity-50 hover:opacity-100 transition-opacity leading-none ml-0.5 hover:text-[#FC2847]"
+                    >×</button>
+                  </span>
+                ))}
+                {attachments.length === 0 && links.length === 0 && !attachDragging && !showLinkInput && (
+                  <span className="font-mono text-[10px] text-[#3a3a3a]">Drop files or links here</span>
+                )}
+                {showLinkInput ? (
+                  <input
+                    ref={linkInputRef}
+                    value={linkInput}
+                    onChange={e => setLinkInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); handleAddLink(linkInput) }
+                      if (e.key === 'Escape') { setShowLinkInput(false); setLinkInput('') }
+                    }}
+                    onBlur={() => { if (!linkInput.trim()) setShowLinkInput(false) }}
+                    placeholder="Paste URL…"
+                    className="font-mono text-[10px] bg-[#1e2a38] border border-[#4a9eca]/40 rounded px-2 py-0.5 text-[#a0c8e8] placeholder-[#3a5a70] focus:outline-none w-48"
+                  />
+                ) : (
+                  <button
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={() => setShowLinkInput(true)}
+                    className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-[#333] text-[#4a4a4a] hover:border-[#4a9eca]/50 hover:text-[#4a9eca] transition-colors"
+                    title="Add a link"
+                  >+ link</button>
                 )}
               </div>
             </div>
@@ -524,5 +602,17 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
         </div>
       </div>
     </div>
+  )
+}
+
+function SubLinkIcon({ url }: { url: string }) {
+  if (url.includes('google.com')) {
+    return <span className="text-[9px] font-bold leading-none flex-shrink-0" style={{ color: '#4285f4' }}>G</span>
+  }
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0">
+      <path d="M4 5.5a2.5 2.5 0 003.5 0l1-1a2.5 2.5 0 00-3.5-3.5L4.5 1.5" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round"/>
+      <path d="M6 4.5a2.5 2.5 0 00-3.5 0l-1 1a2.5 2.5 0 003.5 3.5L5.5 8.5" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round"/>
+    </svg>
   )
 }

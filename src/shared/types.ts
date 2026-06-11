@@ -110,6 +110,14 @@ export interface TaskAttachmentWithStatus extends TaskAttachment {
   exists: boolean
 }
 
+export interface TaskLink {
+  id: string
+  task_id: string
+  url: string
+  name: string
+  added_at: string
+}
+
 export interface FileEntry {
   name: string
   relativePath: string

@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import initSqlJs, { Database } from 'sql.js'
-import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem, TaskAttachment, TaskAttachmentWithStatus, SubTask } from '../shared/types'
+import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem, TaskAttachment, TaskAttachmentWithStatus, SubTask, TaskLink } from '../shared/types'
 
 const DB_PATH = join(app.getPath('userData'), 'tasks.db')
 
@@ -71,6 +71,14 @@ function migrate(db: Database): void {
       id       TEXT PRIMARY KEY,
       task_id  TEXT NOT NULL,
       path     TEXT NOT NULL,
+      name     TEXT NOT NULL,
+      added_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS task_links (
+      id       TEXT PRIMARY KEY,
+      task_id  TEXT NOT NULL,
+      url      TEXT NOT NULL,
       name     TEXT NOT NULL,
       added_at TEXT NOT NULL
     );
@@ -556,6 +564,38 @@ export async function addAttachment(taskId: string, filePath: string): Promise<T
 export async function removeAttachment(attachmentId: string): Promise<void> {
   const d = await getDb()
   run(d, 'DELETE FROM task_attachments WHERE id = ?', [attachmentId])
+  save()
+}
+
+// ─── Links ──────────────────────────────────────────────────────────────────
+
+export async function listLinks(taskId: string): Promise<TaskLink[]> {
+  const d = await getDb()
+  return all<TaskLink>(d, 'SELECT * FROM task_links WHERE task_id = ? ORDER BY added_at ASC', [taskId])
+}
+
+export async function addLink(taskId: string, url: string, name: string): Promise<TaskLink | { error: string }> {
+  const d = await getDb()
+  const existing = all<TaskLink>(d, 'SELECT * FROM task_links WHERE task_id = ?', [taskId])
+  if (existing.length >= 20) return { error: 'Maximum 20 links per task' }
+  const duplicate = existing.find(r => r.url === url)
+  if (duplicate) return duplicate
+  const record: TaskLink = {
+    id: uuidv4(),
+    task_id: taskId,
+    url,
+    name,
+    added_at: new Date().toISOString(),
+  }
+  run(d, 'INSERT INTO task_links (id, task_id, url, name, added_at) VALUES (?, ?, ?, ?, ?)',
+    [record.id, record.task_id, record.url, record.name, record.added_at])
+  save()
+  return record
+}
+
+export async function removeLink(linkId: string): Promise<void> {
+  const d = await getDb()
+  run(d, 'DELETE FROM task_links WHERE id = ?', [linkId])
   save()
 }
 

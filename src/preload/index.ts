@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask } from '../shared/types'
+import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask, TaskLink } from '../shared/types'
 
 const api = {
   tasks: {
@@ -31,6 +31,12 @@ const api = {
     counts: (): Promise<Record<string, number>>                                                => ipcRenderer.invoke('attachments:counts'),
     open:   (filePath: string): Promise<string>                                               => ipcRenderer.invoke('attachments:open', filePath),
     reveal: (filePath: string): Promise<void>                                                 => ipcRenderer.invoke('attachments:reveal', filePath),
+  },
+  links: {
+    list:   (taskId: string): Promise<TaskLink[]>                              => ipcRenderer.invoke('links:list', taskId),
+    add:    (taskId: string, url: string, name: string): Promise<TaskLink | { error: string }> => ipcRenderer.invoke('links:add', taskId, url, name),
+    remove: (id: string): Promise<void>                                       => ipcRenderer.invoke('links:remove', id),
+    open:   (url: string): Promise<void>                                      => ipcRenderer.invoke('links:open', url),
   },
   files: {
     list:   (relativePath: string): Promise<FileEntry[] | null>    => ipcRenderer.invoke('files:list', relativePath),
