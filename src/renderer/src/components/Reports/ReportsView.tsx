@@ -183,11 +183,11 @@ function LabelBreakdownTable({ data, onLabelClick }: { data: LabelBreakdownItem[
               <td className="py-2 pr-3">
                 <button
                   onClick={() => onLabelClick(row.label)}
-                  className="flex items-center gap-2 hover:underline text-left group/label"
+                  className="flex items-center gap-2 text-left group/label"
                 >
                   <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: row.colour }} />
                   <span className="text-[#c45d2e] text-[10px] flex-shrink-0">↗</span>
-                  <span className="text-[#c0c0c0] truncate max-w-[200px]">{row.label}</span>
+                  <span className="text-[#c0c0c0] group-hover/label:text-[#f0f0f0] transition-colors truncate max-w-[200px]">{row.label}</span>
                 </button>
               </td>
               <td className="text-right px-3 text-[#888888]">{row.total}</td>
