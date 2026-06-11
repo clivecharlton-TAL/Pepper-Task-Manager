@@ -939,20 +939,20 @@ export default function TaskDetailModal({ task, onClose }: Props) {
 
                 {subTasks.map(st => (
                   <div key={st.id} className="group/st flex items-center gap-2 py-0.5">
-                    {/* Checkbox */}
+                    {/* Checkbox — matches status icons in list view */}
                     <button
                       onMouseDown={e => e.stopPropagation()}
                       onClick={() => handleSubTaskToggle(st.id, !st.done)}
                       className="flex-shrink-0 transition-opacity hover:opacity-70"
                     >
                       {st.done ? (
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                          <circle cx="7" cy="7" r="6.5" fill="#4caf82"/>
-                          <path d="M4.5 7.2L6.2 9L9.5 5.5" stroke="#1c1c1e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
+                          <circle cx="9" cy="9" r="8.5" fill="#4caf82"/>
+                          <path d="M5.5 9.2 L7.5 11.2 L12.5 6.5" stroke="#1c1c1e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       ) : (
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                          <circle cx="7" cy="7" r="6.5" stroke="#555555" strokeWidth="1"/>
+                        <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
+                          <circle cx="9" cy="9" r="7" stroke="#4a9eca" strokeWidth="1.5"/>
                         </svg>
                       )}
                     </button>
