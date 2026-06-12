@@ -57,17 +57,30 @@ export function registerIpcHandlers(): void {
     const TEXT_EXTS = new Set(['.txt','.md','.markdown','.csv','.json','.js','.ts','.jsx','.tsx','.py','.html','.css','.xml','.yaml','.yml','.sh','.log','.conf','.toml','.ini','.sql'])
     const MAX_BYTES = 30_000
 
+    const read: { name: string; sizeKb: number }[] = []
+    const skipped: { name: string; reason: string }[] = []
+
     const attachments = (attachmentPaths ?? []).map(p => {
+      const name = p.split('/').pop() ?? p
       try {
-        if (!existsSync(p)) return null
+        if (!existsSync(p)) { skipped.push({ name, reason: 'file not found' }); return null }
         const ext = extname(p).toLowerCase()
-        if (!TEXT_EXTS.has(ext)) return null
-        const size = statSync(p).size
+        if (!TEXT_EXTS.has(ext)) { skipped.push({ name, reason: 'format not supported' }); return null }
         const raw = readFileSync(p, 'utf-8')
+        const size = statSync(p).size
         const content = size > MAX_BYTES ? raw.slice(0, MAX_BYTES) + '\n…[truncated]' : raw
-        return { name: p.split('/').pop() ?? p, content }
-      } catch { return null }
+        read.push({ name, sizeKb: Math.round(size / 102.4) / 10 })
+        return { name, content }
+      } catch { skipped.push({ name, reason: 'read error' }); return null }
     }).filter((a): a is { name: string; content: string } => a !== null)
+
+    if (!event.sender.isDestroyed()) {
+      event.sender.send('ai:draft-context', {
+        read,
+        skipped,
+        links: (linkRefs ?? []).map(l => l.name),
+      })
+    }
 
     await streamDraft(title, attachments, linkRefs ?? [], (chunk) => {
       if (!event.sender.isDestroyed()) event.sender.send('ai:chunk', chunk)

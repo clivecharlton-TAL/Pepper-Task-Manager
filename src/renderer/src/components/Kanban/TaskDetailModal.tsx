@@ -89,6 +89,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [aiError,        setAiError]        = useState('')
   const [showKeyInput,   setShowKeyInput]   = useState(false)
   const [keyInput,       setKeyInput]       = useState('')
+  const [aiContext,      setAiContext]      = useState<{ read: {name: string; sizeKb: number}[]; skipped: {name: string; reason: string}[]; links: string[] } | null>(null)
   const [attachments,    setAttachments]    = useState<TaskAttachmentWithStatus[]>([])
   const [attachDragging, setAttachDragging] = useState(false)
   const [attachError,    setAttachError]    = useState('')
@@ -186,6 +187,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
 
   const handleAiDraft = async () => {
     setAiError('')
+    setAiContext(null)
     const hasKey = await window.api.ai.hasKey()
     if (!hasKey) { setShowKeyInput(true); return }
 
@@ -193,9 +195,8 @@ export default function TaskDetailModal({ task, onClose }: Props) {
     setNotesMode('edit')
     setNotes('')
 
-    const unsub = window.api.ai.onChunk((chunk) => {
-      setNotes(prev => prev + chunk)
-    })
+    const unsubChunk   = window.api.ai.onChunk((chunk) => setNotes(prev => prev + chunk))
+    const unsubContext = window.api.ai.onDraftContext((ctx) => setAiContext(ctx))
 
     try {
       await window.api.ai.draft(
@@ -207,7 +208,8 @@ export default function TaskDetailModal({ task, onClose }: Props) {
       setAiError(String(e))
       setAiState('error')
     } finally {
-      unsub()
+      unsubChunk()
+      unsubContext()
       setAiState('idle')
     }
   }
@@ -544,6 +546,29 @@ export default function TaskDetailModal({ task, onClose }: Props) {
             {/* AI error */}
             {aiState === 'error' && aiError && (
               <p className="mb-2 font-mono text-[10px] text-[#FC2847]">{aiError}</p>
+            )}
+
+            {/* AI context — what was read */}
+            {aiContext && (aiState === 'drafting' || notes) && (
+              <div className="mb-2 px-2.5 py-1.5 rounded bg-[#1a1a1a] border border-[#2a2a2a] font-mono text-[9px] text-[#555555] flex flex-col gap-0.5">
+                {aiContext.read.length > 0 && (
+                  <span className="text-[#4caf82]">
+                    ✓ Read: {aiContext.read.map(f => `${f.name} (${f.sizeKb}KB)`).join(', ')}
+                    {aiContext.links.length > 0 && ` · ${aiContext.links.join(', ')}`}
+                  </span>
+                )}
+                {aiContext.read.length === 0 && aiContext.links.length > 0 && (
+                  <span className="text-[#555555]">Links: {aiContext.links.join(', ')} (content not readable)</span>
+                )}
+                {aiContext.read.length === 0 && aiContext.links.length === 0 && (
+                  <span className="text-[#555555]">Title only — no readable attachments found</span>
+                )}
+                {aiContext.skipped.length > 0 && (
+                  <span className="text-[#FFC400]">
+                    ⚠ Skipped: {aiContext.skipped.map(s => `${s.name} (${s.reason})`).join(', ')}
+                  </span>
+                )}
+              </div>
             )}
 
             {notesMode === 'edit' ? (

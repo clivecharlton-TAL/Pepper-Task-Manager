@@ -54,6 +54,11 @@ const api = {
       ipcRenderer.on('ai:chunk', wrapped)
       return () => ipcRenderer.removeListener('ai:chunk', wrapped)
     },
+    onDraftContext: (fn: (ctx: { read: {name: string; sizeKb: number}[]; skipped: {name: string; reason: string}[]; links: string[] }) => void): () => void => {
+      const wrapped = (_e: Electron.IpcRendererEvent, ctx: Parameters<typeof fn>[0]) => fn(ctx)
+      ipcRenderer.on('ai:draft-context', wrapped)
+      return () => ipcRenderer.removeListener('ai:draft-context', wrapped)
+    },
     query: (messages: { role: 'user' | 'assistant'; content: string }[]): Promise<void> =>
       ipcRenderer.invoke('ai:query', messages),
     onQueryChunk: (fn: (chunk: string) => void): () => void => {
