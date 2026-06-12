@@ -20,9 +20,28 @@ export function saveApiKey(key: string): void {
   writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2))
 }
 
-const DRAFT_PROMPT = (title: string) => `You are a Chief-of-Staff assistant. Generate a detailed, structured task description in markdown for the following task. Be concise but specific and actionable.
+const DRAFT_PROMPT = (
+  title: string,
+  attachments: { name: string; content: string }[],
+  links: { name: string; url: string }[]
+) => {
+  const docSection = attachments.length > 0
+    ? `\n\n## Attached Documents\nUse these as primary context for the description:\n\n` +
+      attachments.map(a => `### ${a.name}\n${a.content}`).join('\n\n')
+    : ''
 
-Task: "${title}"
+  const linkSection = links.length > 0
+    ? `\n\n## Referenced Links\n` +
+      links.map(l => `- **${l.name}**: ${l.url}`).join('\n')
+    : ''
+
+  const contextNote = (attachments.length > 0 || links.length > 0)
+    ? '\n\nBase your description primarily on the attached documents and referenced links above. Extract specific details, goals, and context from them rather than generating generic content.'
+    : ''
+
+  return `You are a Chief-of-Staff assistant. Generate a detailed, structured task description in markdown for the following task. Be concise but specific and actionable.
+
+Task: "${title}"${docSection}${linkSection}${contextNote}
 
 Write the description with this structure:
 
@@ -39,6 +58,7 @@ A clear 1–2 sentence explanation of what this task involves and why it matters
 - Clear, measurable success criteria
 
 Use clean markdown: headers (##), bullet points, and **bold** for emphasis where needed. Do not repeat the task title as a heading. Tailor the language to a senior engineering leadership context.`
+}
 
 const QUERY_SYSTEM_PROMPT = (tasksJson: string) =>
   `You are an AI assistant embedded in Pepper, a task management app. Answer questions about the user's tasks concisely and helpfully. Format responses in markdown where appropriate.
@@ -70,16 +90,21 @@ export async function streamQuery(
   }
 }
 
-export async function streamDraft(title: string, onChunk: (text: string) => void): Promise<void> {
+export async function streamDraft(
+  title: string,
+  attachments: { name: string; content: string }[],
+  links: { name: string; url: string }[],
+  onChunk: (text: string) => void
+): Promise<void> {
   const apiKey = readConfig().anthropicApiKey
   if (!apiKey) throw new Error('NO_API_KEY')
 
   const client = new Anthropic({ apiKey })
   const stream = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
+    max_tokens: 2048,
     stream: true,
-    messages: [{ role: 'user', content: DRAFT_PROMPT(title) }]
+    messages: [{ role: 'user', content: DRAFT_PROMPT(title, attachments, links) }]
   })
 
   for await (const event of stream) {

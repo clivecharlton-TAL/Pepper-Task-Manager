@@ -1,6 +1,7 @@
 import { ipcMain, shell } from 'electron'
-import { join } from 'path'
+import { join, extname } from 'path'
 import { homedir } from 'os'
+import { readFileSync, statSync, existsSync } from 'fs'
 import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
 import { hasApiKey, saveApiKey, streamDraft, streamQuery } from './ai'
@@ -47,8 +48,28 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('ai:has-key', () => hasApiKey())
   ipcMain.handle('ai:save-key', (_e, key: string) => { saveApiKey(key) })
-  ipcMain.handle('ai:draft', async (event, title: string) => {
-    await streamDraft(title, (chunk) => {
+  ipcMain.handle('ai:draft', async (
+    event,
+    title: string,
+    attachmentPaths: string[],
+    linkRefs: { name: string; url: string }[]
+  ) => {
+    const TEXT_EXTS = new Set(['.txt','.md','.markdown','.csv','.json','.js','.ts','.jsx','.tsx','.py','.html','.css','.xml','.yaml','.yml','.sh','.log','.conf','.toml','.ini','.sql'])
+    const MAX_BYTES = 30_000
+
+    const attachments = (attachmentPaths ?? []).map(p => {
+      try {
+        if (!existsSync(p)) return null
+        const ext = extname(p).toLowerCase()
+        if (!TEXT_EXTS.has(ext)) return null
+        const size = statSync(p).size
+        const raw = readFileSync(p, 'utf-8')
+        const content = size > MAX_BYTES ? raw.slice(0, MAX_BYTES) + '\n…[truncated]' : raw
+        return { name: p.split('/').pop() ?? p, content }
+      } catch { return null }
+    }).filter((a): a is { name: string; content: string } => a !== null)
+
+    await streamDraft(title, attachments, linkRefs ?? [], (chunk) => {
       if (!event.sender.isDestroyed()) event.sender.send('ai:chunk', chunk)
     })
   })

@@ -47,7 +47,8 @@ const api = {
   ai: {
     hasKey:  (): Promise<boolean>  => ipcRenderer.invoke('ai:has-key'),
     saveKey: (key: string): Promise<void> => ipcRenderer.invoke('ai:save-key', key),
-    draft:   (title: string): Promise<void> => ipcRenderer.invoke('ai:draft', title),
+    draft:   (title: string, attachmentPaths: string[], links: { name: string; url: string }[]): Promise<void> =>
+      ipcRenderer.invoke('ai:draft', title, attachmentPaths, links),
     onChunk: (fn: (chunk: string) => void): () => void => {
       const wrapped = (_e: Electron.IpcRendererEvent, chunk: string) => fn(chunk)
       ipcRenderer.on('ai:chunk', wrapped)

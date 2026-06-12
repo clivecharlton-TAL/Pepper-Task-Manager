@@ -166,7 +166,11 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
 
     const unsub = window.api.ai.onChunk((chunk) => setNotes(prev => prev + chunk))
     try {
-      await window.api.ai.draft(title)
+      await window.api.ai.draft(
+        title,
+        attachments.filter(a => a.exists).map(a => a.path),
+        links.map(l => ({ name: l.name, url: l.url }))
+      )
     } catch (e) {
       setAiError(String(e))
       setAiState('error')

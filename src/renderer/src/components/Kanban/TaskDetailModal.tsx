@@ -198,7 +198,11 @@ export default function TaskDetailModal({ task, onClose }: Props) {
     })
 
     try {
-      await window.api.ai.draft(title)
+      await window.api.ai.draft(
+        title,
+        attachments.filter(a => a.exists).map(a => a.path),
+        links.map(l => ({ name: l.name, url: l.url }))
+      )
     } catch (e) {
       setAiError(String(e))
       setAiState('error')
