@@ -71,6 +71,18 @@ const TASK_TOOLS: Anthropic.Tool[] = [
       required: ['id'],
     },
   },
+  {
+    name: 'create_subtask',
+    description: 'Create a sub-task (checklist item) under an existing parent task. Use this — NOT create_task — when the user asks to add sub-tasks, steps, or checklist items to a specific task.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        parent_task_id: { type: 'string', description: 'ID of the parent task' },
+        title:          { type: 'string', description: 'Sub-task title' },
+      },
+      required: ['parent_task_id', 'title'],
+    },
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -252,6 +264,8 @@ function describeAction(toolName: string, input: Record<string, unknown>): strin
     }
     case 'delete_task':
       return `Deleted task ${input.id}`
+    case 'create_subtask':
+      return `Added sub-task "${input.title}"`
     default:
       return toolName
   }

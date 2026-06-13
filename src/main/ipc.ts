@@ -118,6 +118,10 @@ export function registerIpcHandlers(): void {
             if (ok) broadcast({ type: 'task:deleted', id: input.id as string })
             return { success: ok }
           }
+          case 'create_subtask': {
+            const subtask = await createSubTask(input.parent_task_id as string, input.title as string)
+            return { success: true, subtask }
+          }
           default:
             return { error: `Unknown tool: ${toolName}` }
         }
