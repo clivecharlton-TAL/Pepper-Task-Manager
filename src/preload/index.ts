@@ -66,6 +66,11 @@ const api = {
       ipcRenderer.on('ai:query-chunk', wrapped)
       return () => ipcRenderer.removeListener('ai:query-chunk', wrapped)
     },
+    onQueryAction: (fn: (action: string) => void): () => void => {
+      const wrapped = (_e: Electron.IpcRendererEvent, action: string) => fn(action)
+      ipcRenderer.on('ai:query-action', wrapped)
+      return () => ipcRenderer.removeListener('ai:query-action', wrapped)
+    },
   },
   wallpapers: {
     list: (): Promise<string[]> => ipcRenderer.invoke('wallpapers:list'),

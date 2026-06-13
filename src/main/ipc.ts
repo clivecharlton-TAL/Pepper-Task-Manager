@@ -90,9 +90,39 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('ai:query', async (event, messages: { role: 'user' | 'assistant'; content: string }[]) => {
     const tasks = await getTasks()
     const tasksJson = JSON.stringify(tasks)
-    await streamQuery(messages, tasksJson, (chunk) => {
-      if (!event.sender.isDestroyed()) event.sender.send('ai:query-chunk', chunk)
-    })
+
+    const send = (channel: string, payload: unknown) => {
+      if (!event.sender.isDestroyed()) event.sender.send(channel, payload)
+    }
+
+    await streamQuery(
+      messages,
+      tasksJson,
+      (chunk)   => send('ai:query-chunk', chunk),
+      (action)  => send('ai:query-action', action),
+      async (toolName, input) => {
+        switch (toolName) {
+          case 'create_task': {
+            const task = await createTask(input as CreateTaskInput)
+            broadcast({ type: 'task:created', task })
+            return { success: true, task }
+          }
+          case 'update_task': {
+            const { id, ...patch } = input as { id: string } & Partial<UpdateTaskInput>
+            const task = await updateTask({ id, ...patch })
+            if (task) broadcast({ type: 'task:updated', task })
+            return { success: !!task, task }
+          }
+          case 'delete_task': {
+            const ok = await deleteTask(input.id as string)
+            if (ok) broadcast({ type: 'task:deleted', id: input.id as string })
+            return { success: ok }
+          }
+          default:
+            return { error: `Unknown tool: ${toolName}` }
+        }
+      }
+    )
   })
 
   ipcMain.handle('subtasks:list',   (_e, taskId: string) => listSubTasks(taskId))
