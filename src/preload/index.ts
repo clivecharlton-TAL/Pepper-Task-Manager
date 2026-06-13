@@ -67,6 +67,9 @@ const api = {
       return () => ipcRenderer.removeListener('ai:query-chunk', wrapped)
     },
   },
+  wallpapers: {
+    list: (): Promise<string[]> => ipcRenderer.invoke('wallpapers:list'),
+  },
   window: {
     hideQuickAdd: () => ipcRenderer.send('quick-add:hide'),
     showMain: () => ipcRenderer.send('main-window:show'),

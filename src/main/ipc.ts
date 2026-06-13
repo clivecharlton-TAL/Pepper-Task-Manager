@@ -1,7 +1,7 @@
 import { ipcMain, shell } from 'electron'
 import { join, extname } from 'path'
 import { homedir } from 'os'
-import { readFileSync, statSync, existsSync } from 'fs'
+import { readFileSync, statSync, existsSync, readdirSync } from 'fs'
 import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
 import { hasApiKey, saveApiKey, streamDraft, streamQuery } from './ai'
@@ -126,5 +126,18 @@ export function registerIpcHandlers(): void {
       broadcast({ type: 'labels:changed', added: 1 })
     }
     return result
+  })
+
+  ipcMain.handle('wallpapers:list', () => {
+    const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif'])
+    const dir = join(homedir(), 'Wallpapers')
+    if (!existsSync(dir)) return []
+    try {
+      return readdirSync(dir)
+        .filter(f => IMAGE_EXTS.has(extname(f).toLowerCase()))
+        .map(f => `file://${join(dir, f)}`)
+    } catch {
+      return []
+    }
   })
 }

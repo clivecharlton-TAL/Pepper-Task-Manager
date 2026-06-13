@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTaskStore } from '../../stores/taskStore'
 
 import img01 from '../../assets/zero-state/01-milky-way-mountains.jpg'
@@ -9,11 +9,19 @@ import img05 from '../../assets/zero-state/05-bunker-tunnel.jpg'
 import img06 from '../../assets/zero-state/06-viaduc-bridge.jpg'
 import img07 from '../../assets/zero-state/07-corridor-red.jpg'
 
-const IMAGES = [img01, img02, img03, img04, img05, img06, img07]
+const BUNDLED = [img01, img02, img03, img04, img05, img06, img07]
+
+function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
 
 export default function ZeroStateView() {
-  const [image] = useState(() => IMAGES[Math.floor(Math.random() * IMAGES.length)])
+  const [image, setImage] = useState<string>(() => pick(BUNDLED))
   const { activeLabel, activeStatus, activePriority, activeDue, searchQuery } = useTaskStore()
+
+  useEffect(() => {
+    window.api.wallpapers.list().then(paths => {
+      setImage(pick(paths.length > 0 ? paths : BUNDLED))
+    })
+  }, [])
   const hasFilter = !!(activeLabel || activeStatus || activePriority || activeDue || searchQuery)
 
   return (
