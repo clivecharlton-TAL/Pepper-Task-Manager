@@ -3,6 +3,7 @@ import { useTaskStore, type DueFilter } from '../../stores/taskStore'
 import { KANBAN_COLUMNS, type Task, type TaskStatus, type LabelNode } from '../../../../shared/types'
 import KanbanColumn from './KanbanColumn'
 import TaskDetailModal from './TaskDetailModal'
+import ZeroStateView from '../shared/ZeroStateView'
 
 function flattenLabels(nodes: LabelNode[]): LabelNode[] {
   const out: LabelNode[] = []
@@ -55,17 +56,21 @@ export default function KanbanBoard() {
 
   return (
     <>
-      <div className="flex-1 flex gap-4 p-4 overflow-x-auto overflow-y-hidden">
-        {KANBAN_COLUMNS.map(col => (
-          <KanbanColumn
-            key={col.id}
-            id={col.id}
-            label={col.label}
-            tasks={tasksByStatus(col.id)}
-            onOpenTask={setDetailTask}
-          />
-        ))}
-      </div>
+      {visibleTasks.length === 0 ? (
+        <ZeroStateView />
+      ) : (
+        <div className="flex-1 flex gap-4 p-4 overflow-x-auto overflow-y-hidden">
+          {KANBAN_COLUMNS.map(col => (
+            <KanbanColumn
+              key={col.id}
+              id={col.id}
+              label={col.label}
+              tasks={tasksByStatus(col.id)}
+              onOpenTask={setDetailTask}
+            />
+          ))}
+        </div>
+      )}
 
       {detailTask && (
         <TaskDetailModal task={detailTask} onClose={() => setDetailTask(null)} />

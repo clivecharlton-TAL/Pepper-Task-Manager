@@ -51,3 +51,17 @@ input:focus, textarea:focus { outline: none; }
 /* Drag region for frameless window */
 .drag-region { -webkit-app-region: drag; }
 .no-drag { -webkit-app-region: no-drag; }
+
+/* Zero state — night sky animations */
+@keyframes zero-twinkle {
+  0%, 100% { opacity: 0.9; }
+  50%       { opacity: 0.05; }
+}
+@keyframes zero-aurora {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 0.25; }
+}
+
+.zero-twinkle  { animation: zero-twinkle 4.5s ease-in-out infinite; }
+.zero-aurora-a { animation: zero-aurora  11s  ease-in-out infinite; }
+.zero-aurora-b { animation: zero-aurora  16s  ease-in-out infinite 3s; }

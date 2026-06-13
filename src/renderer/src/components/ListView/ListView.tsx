@@ -3,6 +3,7 @@ import { useTaskStore, type DueFilter, type ListSort, type ListGroup } from '../
 import type { Task, LabelNode, TaskStatus, TaskPriority } from '../../../../shared/types'
 import ListRow from './ListRow'
 import TaskDetailModal from '../Kanban/TaskDetailModal'
+import ZeroStateView from '../shared/ZeroStateView'
 
 function matchesDue(task: Task, filter: DueFilter): boolean {
   if (!task.due_date || task.status === 'done') return false
@@ -152,17 +153,26 @@ export default function ListView() {
 
   const rows = showDone ? [...activeTasks, ...doneTasks] : activeTasks
 
+  const isEmpty = groups !== null
+    ? groups.length === 0
+    : rows.length === 0 && doneTasks.length === 0
+
+  if (isEmpty) {
+    return (
+      <>
+        <ZeroStateView />
+        {detailTask && <TaskDetailModal task={detailTask} onClose={() => setDetailTask(null)} />}
+      </>
+    )
+  }
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-3xl mx-auto px-8 py-4">
 
         {/* Grouped rendering */}
         {groups !== null ? (
-          groups.length === 0 ? (
-            <div className="flex items-center justify-center h-32">
-              <p className="font-mono text-[11px] text-[#3a3a3a]">No tasks</p>
-            </div>
-          ) : (
+          groups.length === 0 ? null : (
             groups.map(g => (
               <div key={g.header}>
                 <GroupHeader header={g.header} color={g.color} />
@@ -181,21 +191,15 @@ export default function ListView() {
         ) : (
           /* Flat rendering */
           <>
-            {rows.length === 0 && doneTasks.length === 0 ? (
-              <div className="flex items-center justify-center h-32">
-                <p className="font-mono text-[11px] text-[#3a3a3a]">No tasks</p>
-              </div>
-            ) : (
-              rows.map((task, i) => (
-                <ListRow
-                  key={task.id}
-                  task={task}
-                  flatLabels={flatLabels}
-                  onOpen={setDetailTask}
-                  isLast={i === rows.length - 1 && doneTasks.length === 0}
-                />
-              ))
-            )}
+            {rows.map((task, i) => (
+              <ListRow
+                key={task.id}
+                task={task}
+                flatLabels={flatLabels}
+                onOpen={setDetailTask}
+                isLast={i === rows.length - 1 && doneTasks.length === 0}
+              />
+            ))}
 
             {!activeStatus && doneTasks.length > 0 && (
               <button
