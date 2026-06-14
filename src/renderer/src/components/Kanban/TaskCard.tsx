@@ -15,6 +15,17 @@ const PRIORITY_COLOURS: Record<TaskPriority, string> = {
   low:    '#30D158'
 }
 
+function stripMarkdown(text: string): string {
+  return text
+    .split('\n')[0]
+    .replace(/^#+\s+/, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/^[-*]\s+/, '')
+    .trim()
+}
+
 function flattenNodes(nodes: LabelNode[]): LabelNode[] {
   const result: LabelNode[] = []
   const walk = (arr: LabelNode[]) => { for (const n of arr) { result.push(n); walk(n.children) } }
@@ -122,7 +133,7 @@ export default function TaskCard({ task, isDragging, onOpen }: Props) {
           className="text-[11px] text-[#888888] leading-relaxed mb-2 overflow-hidden"
           style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}
         >
-          {task.notes}
+          {stripMarkdown(task.notes)}
         </p>
       )}
 
