@@ -4,6 +4,7 @@ import { format, parseISO, isPast, isToday, isTomorrow } from 'date-fns'
 import type { Task, TaskStatus, TaskPriority, LabelNode } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
 import { useAttachmentCountStore } from '../../stores/attachmentCountStore'
+import { useSubTaskCountStore } from '../../stores/subTaskCountStore'
 import MentionText from '../shared/MentionText'
 
 const STATUS_COLOURS: Record<TaskStatus, string> = {
@@ -74,6 +75,8 @@ interface Props {
 export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
   const { deleteTask, updateTask } = useTaskStore()
   const { counts, incrementCount } = useAttachmentCountStore()
+  const { counts: subCounts } = useSubTaskCountStore()
+  const subCount = subCounts[task.id] ?? null
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
   const [fileDragging, setFileDragging] = useState(false)
   const isDone = task.status === 'done'
@@ -150,7 +153,7 @@ export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
             </p>
           )}
 
-          {(due || labelMeta.length > 0 || task.linked_email_id || attachCount > 0) && (
+          {(due || labelMeta.length > 0 || task.linked_email_id || attachCount > 0 || subCount) && (
             <div className="flex items-center gap-3 flex-wrap">
               {due && (
                 <span className={`font-mono text-[10px] flex items-center gap-1 ${due.urgent ? 'text-[#FC2847]' : 'text-[#6b7280]'}`}>
@@ -176,6 +179,17 @@ export default function ListRow({ task, flatLabels, onOpen, isLast }: Props) {
               ))}
               {task.linked_email_id && (
                 <span className="font-mono text-[10px] text-[#4a9eca]">✉ linked</span>
+              )}
+              {subCount && (
+                <span className={`font-mono text-[10px] flex items-center gap-0.5 ${
+                  subCount.done === subCount.total ? 'text-[#4caf82]' : 'text-[#6b7280]'
+                }`}>
+                  <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+                    <circle cx="4.5" cy="4.5" r="4" stroke="currentColor" strokeWidth="0.9"/>
+                    <path d="M3 4.5L4 5.5L6 3.5" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  {subCount.done}/{subCount.total}
+                </span>
               )}
               {attachCount > 0 && (
                 <span className="font-mono text-[10px] text-[#6b7280] flex items-center gap-0.5">

@@ -98,6 +98,21 @@ export default function TaskCard({ task, isDragging, onOpen }: Props) {
         style={{ backgroundColor: PRIORITY_COLOURS[task.priority] }}
       />
 
+      {/* Sub-task count — top left, above title */}
+      {subCount && (
+        <div className="flex items-center gap-1 mb-1.5">
+          <span className={`font-mono text-[9px] flex items-center gap-1 ${
+            subCount.done === subCount.total ? 'text-[#4caf82]' : 'text-[#505050]'
+          }`}>
+            <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+              <circle cx="4.5" cy="4.5" r="4" stroke="currentColor" strokeWidth="0.9"/>
+              <path d="M3 4.5L4 5.5L6 3.5" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {subCount.done}/{subCount.total}
+          </span>
+        </div>
+      )}
+
       {/* Title */}
       <MentionText text={task.title} className="text-[13px] text-[#f0f0f0] leading-snug pr-4 mb-1.5 block" />
 
@@ -130,7 +145,7 @@ export default function TaskCard({ task, isDragging, onOpen }: Props) {
       )}
 
       {/* Footer row */}
-      {(due || task.linked_email_id || attachCount > 0 || subCount) && (
+      {(due || task.linked_email_id || attachCount > 0) && (
         <div className="flex items-center gap-2">
           {due && (
             <span className={`font-mono text-[10px] ${due.urgent ? 'text-[#FC2847]' : 'text-[#6b7280]'}`}>
@@ -139,15 +154,6 @@ export default function TaskCard({ task, isDragging, onOpen }: Props) {
           )}
           {task.linked_email_id && (
             <span className="font-mono text-[10px] text-[#4a9eca]">✉ linked</span>
-          )}
-          {subCount && (
-            <span className={`font-mono text-[10px] flex items-center gap-0.5 ${subCount.done === subCount.total ? 'text-[#4caf82]' : 'text-[#6b7280]'}`}>
-              <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-                <circle cx="4.5" cy="4.5" r="4" stroke="currentColor" strokeWidth="0.9"/>
-                <path d="M3 4.5L4 5.5L6 3.5" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              {subCount.done}/{subCount.total}
-            </span>
           )}
           {attachCount > 0 && (
             <span className="font-mono text-[10px] text-[#6b7280] flex items-center gap-0.5">
