@@ -6,7 +6,6 @@ const execAsync = promisify(exec)
 
 export async function fetchUpcomingMeetings(): Promise<Meeting[]> {
   try {
-    // Generate a JXA script to fetch from local Calendar
     const script = `
 const app = Application('Calendar');
 const today = new Date();
@@ -20,7 +19,7 @@ const cals = app.calendars();
 for (let c = 0; c < cals.length; c++) {
   try {
     const cal = cals[c];
-    if (cal.name() === 'Holidays' || cal.name() === 'Birthdays') continue;
+    if (cal.name() === 'Holidays' || cal.name() === 'Birthdays' || cal.name().includes('Holidays')) continue;
 
     const events = cal.events({
       where: {
@@ -36,7 +35,10 @@ for (let c = 0; c < cals.length; c++) {
         let endTime = ''; try { endTime = ev.endDate().toISOString(); } catch(e) {}
         let description = ''; try { description = ev.description() || ''; } catch(e) {}
         
-        if (!title || !startTime || !endTime) continue;
+        const isAllDay = (ev.alldayEvent && ev.alldayEvent()) || 
+                         (ev.startDate().getHours() === 0 && ev.endDate().getHours() === 0);
+        
+        if (!title || !startTime || !endTime || isAllDay) continue;
 
         let attendees = [];
         try {
@@ -62,13 +64,17 @@ for (let c = 0; c < cals.length; c++) {
     }
   } catch (e) {}
 }
-JSON.stringify(meetings);
+
+const finalMeetings = meetings.filter(m => {
+  const start = new Date(m.start_time);
+  return start >= today && start < tomorrow;
+});
+
+JSON.stringify(finalMeetings);
 `
     const { stdout } = await execAsync(`osascript -l JavaScript -e "${script.replace(/"/g, '\\"')}"`)
     const parsed = JSON.parse(stdout.trim())
     
-    // Sort chronologically and filter out exact duplicates 
-    // (sometimes Calendar returns the same event across delegated calendars)
     const uniqueIds = new Set()
     const finalMeetings: Meeting[] = []
     
