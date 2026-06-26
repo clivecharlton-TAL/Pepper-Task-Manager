@@ -18,7 +18,16 @@ export default function MeetingBanner({
         }
       }
     })
-    return unsub
+
+    const handleManual = (e: any) => {
+      setUpcomingMeeting(e.detail)
+    }
+    window.addEventListener('manual-meeting-trigger', handleManual)
+
+    return () => {
+      unsub()
+      window.removeEventListener('manual-meeting-trigger', handleManual)
+    }
   }, [dismissedId])
 
   if (!upcomingMeeting) return null
@@ -27,16 +36,16 @@ export default function MeetingBanner({
   const timeString = new Date(upcomingMeeting.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 
   return (
-    <div className="bg-[#c45d2e]/10 border-b border-[#c45d2e]/30 px-4 py-2 flex items-center justify-between font-mono text-[11px] text-[#e0e0e0]">
+    <div className="bg-[#c45d2e]/10 border-b border-[#c45d2e]/30 px-4 py-2 flex items-center justify-between font-mono text-[11px] text-[#e0e0e0] shrink-0">
       <div className="flex items-center gap-3">
         <span className="text-[#c45d2e] font-bold tracking-wider">UPCOMING MEETING</span>
         <span className="text-[#a0a0a0]">•</span>
         <span>{timeString}</span>
         <span className="text-[#a0a0a0]">•</span>
-        <span className="font-semibold text-white">{upcomingMeeting.title}</span>
+        <span className="font-semibold text-white truncate max-w-[400px]">{upcomingMeeting.title}</span>
       </div>
-      
-      <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+
+      <div className="flex items-center gap-3 shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <button
           onClick={() => {
             onOpenBriefing(upcomingMeeting)

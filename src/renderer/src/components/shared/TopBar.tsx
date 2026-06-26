@@ -242,29 +242,9 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
 
       {/* Manual Meeting Trigger */}
       <button
-        onClick={async () => {
-          const btn = document.getElementById('manual-meeting-btn')
-          if (btn) btn.innerHTML = '...'
-          const meeting = await window.api.meetings.getUpcoming()
-
-          if (meeting) {
-            const ev = new CustomEvent('manual-meeting-trigger', { detail: meeting })
-            window.dispatchEvent(ev)
-          } else {
-            // Mock a meeting to force the banner to show
-            const now = new Date()
-            const mockMeeting = {
-              id: 'mock-123',
-              title: 'Mock Sync (Testing)',
-              description: 'This is a mocked meeting because no real meetings were found.',
-              start_time: new Date(now.getTime() + 10 * 60 * 1000).toISOString(),
-              end_time: new Date(now.getTime() + 40 * 60 * 1000).toISOString(),
-              attendees: ['clive@example.com', 'team@example.com'],
-            }
-            const ev = new CustomEvent('manual-meeting-trigger', { detail: mockMeeting })
-            window.dispatchEvent(ev)
-          }
-          if (btn) btn.innerHTML = 'Briefing'
+        onClick={() => {
+          const ev = new CustomEvent('open-briefing-panel')
+          window.dispatchEvent(ev)
         }}
         id="manual-meeting-btn"
         title="Upcoming Meeting Briefing"

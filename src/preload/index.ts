@@ -79,6 +79,10 @@ const api = {
       return () => ipcRenderer.removeListener('ai:briefing-chunk', wrapped)
     },
   },
+  calendar: {
+    getIcsUrl: (): Promise<string | undefined> => ipcRenderer.invoke('calendar:get-ics'),
+    setIcsUrl: (url: string): Promise<void> => ipcRenderer.invoke('calendar:set-ics', url),
+  },
   meetings: {
     getUpcoming: (): Promise<any> => ipcRenderer.invoke('meetings:upcoming'),
   },

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -18,13 +18,12 @@ import ReportsView from './Reports/ReportsView'
 import FilesView from './Files/FilesView'
 import CalendarView from './Calendar/CalendarView'
 import TopBar from './shared/TopBar'
-import MeetingBanner from './shared/MeetingBanner'
 import MeetingBriefingPanel from './MeetingBriefingPanel'
 import AIChatPanel from './AIChatPanel'
 import TaskCard from './Kanban/TaskCard'
 import { useTaskStore } from '../stores/taskStore'
 import { useSubTaskCountStore } from '../stores/subTaskCountStore'
-import { KANBAN_COLUMNS, type Task, type TaskStatus, type Meeting } from '../../../shared/types'
+import { KANBAN_COLUMNS, type Task, type TaskStatus } from '../../../shared/types'
 
 const MIN_WIDTH = 160
 const MAX_WIDTH = 400
@@ -45,13 +44,18 @@ export default function MainWindow() {
   const [sidebarWidth, setSidebarWidth] = useState(280)
   const [isAIChatOpen, setIsAIChatOpen] = useState(false)
   const [isBriefingOpen, setIsBriefingOpen] = useState(false)
-  const [activeMeeting, setActiveMeeting] = useState<Meeting | null>(null)
   const [draggingTask, setDraggingTask] = useState<Task | null>(null)
   const dragging = useRef(false)
   const startX = useRef(0)
   const startWidth = useRef(0)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+
+  useEffect(() => {
+    const handleOpenBriefing = () => setIsBriefingOpen(true)
+    window.addEventListener('open-briefing-panel', handleOpenBriefing)
+    return () => window.removeEventListener('open-briefing-panel', handleOpenBriefing)
+  }, [])
 
   const onDragStart = ({ active }: DragStartEvent) => {
     setDraggingTask(allTasks.find(t => t.id === active.id) ?? null)
@@ -119,11 +123,6 @@ export default function MainWindow() {
     window.addEventListener('mouseup', onUp)
   }, [sidebarWidth])
 
-  const handleOpenBriefing = (meeting: Meeting) => {
-    setActiveMeeting(meeting)
-    setIsBriefingOpen(true)
-  }
-
   return (
     <DndContext
       sensors={sensors}
@@ -143,7 +142,6 @@ export default function MainWindow() {
 
         <div className="flex flex-col flex-1 min-w-0">
           <TopBar isAIChatOpen={isAIChatOpen} onToggleAIChat={() => setIsAIChatOpen(o => !o)} />
-          <MeetingBanner onOpenBriefing={handleOpenBriefing} />
           {viewMode === 'kanban'   ? <KanbanBoard />   :
            viewMode === 'list'     ? <ListView />      :
            viewMode === 'reports'  ? <ReportsView />   :
@@ -153,7 +151,7 @@ export default function MainWindow() {
       </div>
 
       <AIChatPanel isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
-      <MeetingBriefingPanel isOpen={isBriefingOpen} meeting={activeMeeting} onClose={() => setIsBriefingOpen(false)} />
+      <MeetingBriefingPanel isOpen={isBriefingOpen} onClose={() => setIsBriefingOpen(false)} />
 
       <DragOverlay>
         {draggingTask && <TaskCard task={draggingTask} isDragging />}
