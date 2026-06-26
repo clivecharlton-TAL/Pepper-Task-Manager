@@ -19,7 +19,7 @@ const cals = app.calendars();
 for (let c = 0; c < cals.length; c++) {
   try {
     const cal = cals[c];
-    if (cal.name() === 'Holidays' || cal.name() === 'Birthdays' || cal.name().includes('Holidays')) continue;
+    if (cal.name() === 'Holidays' || cal.name() === 'Birthdays' || cal.name().includes('Holidays') || cal.name() === 'Siri Suggestions' || cal.name() === 'Scheduled Reminders') continue;
 
     const events = cal.events({
       where: {
@@ -36,7 +36,8 @@ for (let c = 0; c < cals.length; c++) {
         let description = ''; try { description = ev.description() || ''; } catch(e) {}
         
         const isAllDay = (ev.alldayEvent && ev.alldayEvent()) || 
-                         (ev.startDate().getHours() === 0 && ev.endDate().getHours() === 0);
+                         (ev.startDate().getHours() === 0 && ev.endDate().getHours() === 0) ||
+                         (ev.startDate().getHours() === 2 && ev.endDate().getHours() === 2 && ev.startDate().getMinutes() === 0 && ev.endDate().getMinutes() === 0);
         
         if (!title || !startTime || !endTime || isAllDay) continue;
 
@@ -72,7 +73,9 @@ const finalMeetings = meetings.filter(m => {
 
 JSON.stringify(finalMeetings);
 `
-    const { stdout } = await execAsync(`osascript -l JavaScript -e "${script.replace(/"/g, '\\"')}"`)
+    const { stdout } = await execAsync(`osascript -l JavaScript -e "${script.replace(/"/g, '\\"')}"`, {
+      timeout: 10000 // Give it max 10 seconds to respond so it doesn't freeze the app forever
+    })
     const parsed = JSON.parse(stdout.trim())
     
     const uniqueIds = new Set()
