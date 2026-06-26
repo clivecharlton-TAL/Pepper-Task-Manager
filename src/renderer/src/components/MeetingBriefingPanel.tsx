@@ -60,9 +60,9 @@ const markdownComponents: Components = {
       return (
         <div className="flex items-start gap-2 mt-4 mb-1">
           <span className="inline-flex items-center gap-1.5 text-[#e0e0e0] font-medium cursor-default text-[13px]">
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#888888] shrink-0 translate-y-[1px]">
-              <path d="M7.5 1.5 L12.5 1.5 L12.5 6.5 L6.5 12.5 C5.5 13.5 4 13.5 3 12.5 L1.5 11 C0.5 10 0.5 8.5 1.5 7.5 L7.5 1.5 Z"/>
-              <circle cx="9.5" cy="4.5" r="1" fill="currentColor" stroke="none"/>
+            <svg width="10" height="10" viewBox="0 0 14 14" fill="none" className="text-[#c45d2e] shrink-0 translate-y-[1px]">
+              <rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M5 7L6.5 8.5L9 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span className="flex-1 leading-snug">{children}</span>
           </span>
