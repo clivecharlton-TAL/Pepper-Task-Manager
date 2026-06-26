@@ -337,9 +337,9 @@ You must NEVER output a task title as plain text. You MUST use this exact HTML t
 
 2. DO NOT include or mention any labels or tags. Exclude labels entirely to keep the briefing clean.
 3. DO NOT use markdown links like [Title](url). YOU MUST USE raw HTML <a href="..."> tags.
-4. Do NOT use bullet points for tasks.
+4. Do NOT use bullet points or lists for tasks. Output each task on a new line.
 
-Example of a perfectly formatted line:
+Example of a perfectly formatted task line:
 <a href="https://task.internal/abc-123">Fix login bug</a>
 
 Do not invent tasks. Only reference tasks from the provided JSON.`

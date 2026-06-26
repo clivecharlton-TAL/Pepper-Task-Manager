@@ -31,9 +31,9 @@ const markdownComponents: Components = {
 
     if (href.startsWith('https://task.internal/')) {
       return (
-        <div className="flex items-start gap-2 mt-4 mb-1">
-          <span className="inline-flex items-center gap-1.5 text-[#e0e0e0] font-medium cursor-default text-[13px]">
-            <svg width="10" height="10" viewBox="0 0 14 14" fill="none" className="text-[#c45d2e] shrink-0 translate-y-[1px]">
+        <div className="flex items-start gap-2 mt-4 mb-2">
+          <span className="inline-flex items-center gap-2 text-[#e0e0e0] font-medium cursor-default text-[13px]">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-[#c45d2e] shrink-0 translate-y-[2px]">
               <rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
               <path d="M5 7L6.5 8.5L9 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
