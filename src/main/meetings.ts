@@ -21,8 +21,6 @@ for (let c = 0; c < cals.length; c++) {
     const cal = cals[c];
     if (cal.name() === 'Holidays' || cal.name() === 'Birthdays' || cal.name().includes('Holidays') || cal.name() === 'Siri Suggestions' || cal.name() === 'Scheduled Reminders') continue;
 
-    // Use .whose() to execute the query natively in Apple Events
-    // rather than dragging thousands of events into the JXA runtime.
     const events = cal.events.whose({
       _and: [
         { startDate: { ">=": today } },
@@ -36,7 +34,6 @@ for (let c = 0; c < cals.length; c++) {
         let title = ''; try { title = ev.summary(); } catch(e) {}
         let startTime = ''; try { startTime = ev.startDate().toISOString(); } catch(e) {}
         let endTime = ''; try { endTime = ev.endDate().toISOString(); } catch(e) {}
-        let description = ''; try { description = ev.description() || ''; } catch(e) {}
         
         const isAllDay = (ev.alldayEvent && ev.alldayEvent()) || 
                          (ev.startDate().getHours() === 0 && ev.endDate().getHours() === 0) ||
@@ -58,7 +55,7 @@ for (let c = 0; c < cals.length; c++) {
         meetings.push({
           id: ev.uid() + '-' + c + '-' + i,
           title: title,
-          description: description,
+          description: '',
           start_time: startTime,
           end_time: endTime,
           attendees: attendees,
@@ -77,7 +74,7 @@ const finalMeetings = meetings.filter(m => {
 JSON.stringify(finalMeetings);
 `
     const { stdout } = await execAsync(`osascript -l JavaScript -e "${script.replace(/"/g, '\\"')}"`, {
-      timeout: 10000 // Give it max 10 seconds to respond so it doesn't freeze the app forever
+      timeout: 15000 // Increase timeout just in case attendee extraction is slow
     })
     const parsed = JSON.parse(stdout.trim())
     
