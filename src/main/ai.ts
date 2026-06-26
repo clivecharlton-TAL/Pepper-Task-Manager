@@ -20,6 +20,16 @@ export function saveApiKey(key: string): void {
   writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2))
 }
 
+export function getCalendarIcsUrl(): string | undefined {
+  return readConfig().googleCalendarIcsUrl
+}
+
+export function saveCalendarIcsUrl(url: string): void {
+  const cfg = readConfig()
+  cfg.googleCalendarIcsUrl = url.trim()
+  writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2))
+}
+
 // ---------------------------------------------------------------------------
 // Tool definitions
 // ---------------------------------------------------------------------------
@@ -310,6 +320,13 @@ Use clean markdown:
 - Start with a short 1-sentence summary of the meeting's focus.
 - Use a ## Relevant Tasks section.
 - Use a ## Suggested Agenda or ## Open Questions section if applicable based on the tasks.
+
+CRITICAL FORMATTING RULES FOR SUGGESTED AGENDA:
+1. You MUST separate each agenda item with a blank line. Do not output agenda items immediately after each other.
+2. Example:
+   **Item 1:** description...
+
+   **Item 2:** description...
 
 CRITICAL FORMATTING RULES FOR TASKS:
 You must NEVER output a task title as plain text. You MUST use this exact HTML tag so the UI can parse it correctly. This is absolutely mandatory.
