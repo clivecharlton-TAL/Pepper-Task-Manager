@@ -240,6 +240,40 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
         AI
       </button>
 
+      {/* Manual Meeting Trigger */}
+      <button
+        onClick={async () => {
+          const btn = document.getElementById('manual-meeting-btn')
+          if (btn) btn.innerHTML = '...'
+          const meeting = await window.api.meetings.getUpcoming()
+
+          if (meeting) {
+            const ev = new CustomEvent('manual-meeting-trigger', { detail: meeting })
+            window.dispatchEvent(ev)
+          } else {
+            // Mock a meeting to force the banner to show
+            const now = new Date()
+            const mockMeeting = {
+              id: 'mock-123',
+              title: 'Mock Sync (Testing)',
+              description: 'This is a mocked meeting because no real meetings were found.',
+              start_time: new Date(now.getTime() + 10 * 60 * 1000).toISOString(),
+              end_time: new Date(now.getTime() + 40 * 60 * 1000).toISOString(),
+              attendees: ['clive@example.com', 'team@example.com'],
+            }
+            const ev = new CustomEvent('manual-meeting-trigger', { detail: mockMeeting })
+            window.dispatchEvent(ev)
+          }
+          if (btn) btn.innerHTML = 'Briefing'
+        }}
+        id="manual-meeting-btn"
+        title="Upcoming Meeting Briefing"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        className="no-drag px-2 py-1 rounded border font-mono text-[10px] transition-colors bg-[#2a2a2a] border-[#333333] text-[#888888] hover:border-[#444444] hover:text-[#b0b0b0]"
+      >
+        Briefing
+      </button>
+
       {/* Search */}
       <div
         className={`no-drag flex items-center gap-2 rounded px-3 py-1.5 transition-all border ${

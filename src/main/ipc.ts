@@ -230,12 +230,53 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('ai:briefing', async (event, meetingDetails: string) => {
+    // Need to get all labels to inject into tasksJson so AI knows the label colors
+    const labels = await getLabelTree()
+    // Flatten labels for easy color lookup by name
+    const labelMap: Record<string, string> = {}
+    const flatten = (nodes: any[]) => {
+      nodes.forEach(n => {
+        labelMap[n.name] = n.colour
+        if (n.children) flatten(n.children)
+      })
+    }
+    flatten(labels)
+
     const tasks = await getTasks()
-    const tasksJson = JSON.stringify(tasks.filter(t => t.status !== 'done'))
+    const activeTasks = tasks.filter(t => t.status !== 'done').map(t => ({
+      ...t,
+      // Pass both label ID and resolved name+colour so the AI can format it properly
+      labels_resolved: t.labels.map(id => {
+        // Find label recursively
+        let foundName = id
+        let foundColour = '#888888'
+        const search = (nodes: any[]) => {
+          for (const n of nodes) {
+            if (n.id === id || n.name === id) {
+              foundName = n.name
+              foundColour = n.colour
+              return true
+            }
+            if (n.children && search(n.children)) return true
+          }
+          return false
+        }
+        search(labels)
+        return { name: foundName, colour: foundColour }
+      })
+    }))
+
+    const tasksJson = JSON.stringify(activeTasks)
 
     await streamBriefing(meetingDetails, tasksJson, (chunk) => {
       if (!event.sender.isDestroyed()) event.sender.send('ai:briefing-chunk', chunk)
     })
+  })
+
+  ipcMain.handle('meetings:upcoming', async () => {
+    // Completely removed CLI execution to stop OAuth popups.
+    // Return null to force the UI to generate a mock meeting for testing.
+    return null
   })
 
   ipcMain.handle('subtasks:list',   (_e, taskId: string) => listSubTasks(taskId))

@@ -79,6 +79,9 @@ const api = {
       return () => ipcRenderer.removeListener('ai:briefing-chunk', wrapped)
     },
   },
+  meetings: {
+    getUpcoming: (): Promise<any> => ipcRenderer.invoke('meetings:upcoming'),
+  },
   wallpapers: {
     list: (): Promise<string[]> => ipcRenderer.invoke('wallpapers:list'),
   },
