@@ -1,12 +1,55 @@
 import { useState, useEffect } from 'react'
 import type { Meeting } from '../../../shared/types'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 
 interface MeetingBriefingPanelProps {
   isOpen: boolean
   meeting: Meeting | null
   onClose: () => void
+}
+
+const markdownComponents: Components = {
+  a: ({ node, href, children, ...props }) => {
+    if (!href) return <a {...props}>{children}</a>
+
+    if (href.startsWith('https://label.internal/')) {
+      const colour = href.replace('https://label.internal/', '')
+      return (
+        <span
+          className="font-mono text-[11px] tracking-wide mx-1 inline-flex items-center gap-1.5 align-baseline"
+          style={{ color: colour }}
+        >
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7.5 1.5 L12.5 1.5 L12.5 6.5 L6.5 12.5 C5.5 13.5 4 13.5 3 12.5 L1.5 11 C0.5 10 0.5 8.5 1.5 7.5 L7.5 1.5 Z"/>
+            <circle cx="9.5" cy="4.5" r="1" fill="currentColor" stroke="none"/>
+          </svg>
+          {children}
+        </span>
+      )
+    }
+
+    if (href.startsWith('https://task.internal/')) {
+      return (
+        <div className="flex items-start gap-2 mt-4 mb-1">
+          <span className="inline-flex items-center gap-1.5 text-[#e0e0e0] font-medium cursor-default text-[13px]">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#888888] shrink-0 translate-y-[1px]">
+              <path d="M7.5 1.5 L12.5 1.5 L12.5 6.5 L6.5 12.5 C5.5 13.5 4 13.5 3 12.5 L1.5 11 C0.5 10 0.5 8.5 1.5 7.5 L7.5 1.5 Z"/>
+              <circle cx="9.5" cy="4.5" r="1" fill="currentColor" stroke="none"/>
+            </svg>
+            <span className="flex-1 leading-snug">{children}</span>
+          </span>
+        </div>
+      )
+    }
+
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+        {children}
+      </a>
+    )
+  }
 }
 
 export default function MeetingBriefingPanel({ isOpen, meeting, onClose }: MeetingBriefingPanelProps) {
@@ -88,8 +131,10 @@ export default function MeetingBriefingPanel({ isOpen, meeting, onClose }: Meeti
               Synthesizing context...
             </div>
           ) : (
-            <div className="prose prose-invert prose-sm max-w-none text-[#d0d0d0] text-[13px] leading-relaxed [&>h1]:text-[16px] [&>h1]:font-semibold [&>h1]:mb-3 [&>h1]:mt-6 [&>h1]:text-[#f0f0f0] [&>h2]:text-[14px] [&>h2]:font-semibold [&>h2]:mb-2 [&>h2]:mt-5 [&>h2]:text-[#f0f0f0] [&>h3]:text-[13px] [&>h3]:font-semibold [&>h3]:mb-2 [&>h3]:mt-4 [&>h3]:text-[#e0e0e0] [&>p]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-3 [&>li]:mb-1 [&>pre]:bg-[#1e1e1e] [&>pre]:p-3 [&>pre]:rounded [&>pre]:mb-3 [&>code]:bg-[#1e1e1e] [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:font-mono [&>code]:text-[12px] [&>blockquote]:border-l-2 [&>blockquote]:border-[#333] [&>blockquote]:pl-3 [&>blockquote]:italic [&>blockquote]:text-[#a0a0a0] [&>blockquote]:mb-3 [&>a]:text-[#c45d2e] [&>a]:underline [&>a]:underline-offset-2">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{briefing}</ReactMarkdown>
+            <div className="prose prose-invert prose-sm max-w-none text-[#d0d0d0] text-[13px] leading-relaxed [&>h1]:text-[16px] [&>h1]:font-semibold [&>h1]:mb-3 [&>h1]:mt-6 [&>h1]:text-[#f0f0f0] [&>h2]:text-[14px] [&>h2]:font-semibold [&>h2]:mb-2 [&>h2]:mt-6 [&>h2]:text-[#f0f0f0] [&>h3]:text-[13px] [&>h3]:font-semibold [&>h3]:mb-2 [&>h3]:mt-4 [&>h3]:text-[#e0e0e0] [&>p]:mb-4 [&>ul]:list-none [&>ul]:pl-0 [&>ul]:mb-6 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-6 [&>li]:mb-4 [&>li]:pl-0 [&>pre]:bg-[#1e1e1e] [&>pre]:p-3 [&>pre]:rounded [&>pre]:mb-3 [&>code]:bg-[#1e1e1e] [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:font-mono [&>code]:text-[12px] [&>blockquote]:border-l-2 [&>blockquote]:border-[#333] [&>blockquote]:pl-3 [&>blockquote]:italic [&>blockquote]:text-[#a0a0a0] [&>blockquote]:mb-4 [&>a]:text-[#c45d2e] [&>a]:underline [&>a]:underline-offset-2">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} components={markdownComponents}>
+                {briefing}
+              </ReactMarkdown>
             </div>
           )}
         </div>
