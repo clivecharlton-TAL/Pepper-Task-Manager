@@ -6,9 +6,35 @@ import rehypeRaw from 'rehype-raw'
 
 interface MeetingBriefingPanelProps {
   isOpen: boolean
-  meeting: Meeting | null
   onClose: () => void
 }
+
+const MOCK_TODAY_MEETINGS: Meeting[] = [
+  {
+    id: 'mock-m1',
+    title: 'Daily Standup',
+    description: 'Quick sync on active tasks and blockers.',
+    start_time: new Date(new Date().setHours(10, 0, 0, 0)).toISOString(),
+    end_time: new Date(new Date().setHours(10, 15, 0, 0)).toISOString(),
+    attendees: ['team@example.com'],
+  },
+  {
+    id: 'mock-m2',
+    title: 'Q3 Roadmap Alignment',
+    description: 'Reviewing the draft business case and test automation scaling.',
+    start_time: new Date(new Date().setHours(13, 30, 0, 0)).toISOString(),
+    end_time: new Date(new Date().setHours(14, 30, 0, 0)).toISOString(),
+    attendees: ['clive@example.com', 'leadership@example.com'],
+  },
+  {
+    id: 'mock-m3',
+    title: 'Audit & Compliance Sync',
+    description: 'Final review of the Deloitte draft report.',
+    start_time: new Date(new Date().setHours(16, 0, 0, 0)).toISOString(),
+    end_time: new Date(new Date().setHours(16, 45, 0, 0)).toISOString(),
+    attendees: ['clive@example.com', 'security@example.com'],
+  }
+]
 
 const markdownComponents: Components = {
   a: ({ node, href, children, ...props }) => {
@@ -52,17 +78,26 @@ const markdownComponents: Components = {
   }
 }
 
-export default function MeetingBriefingPanel({ isOpen, meeting, onClose }: MeetingBriefingPanelProps) {
+export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefingPanelProps) {
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
   const [briefing, setBriefing] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Generate briefing when the panel opens with a meeting
+  // Reset state when panel opens/closes
   useEffect(() => {
-    if (isOpen && meeting) {
+    if (!isOpen) {
+      setSelectedMeeting(null)
+      setBriefing('')
+    }
+  }, [isOpen])
+
+  // Generate briefing when a meeting is selected
+  useEffect(() => {
+    if (isOpen && selectedMeeting) {
       setBriefing('')
       setIsLoading(true)
 
-      const details = `Title: ${meeting.title}\nTime: ${new Date(meeting.start_time).toLocaleTimeString()} - ${new Date(meeting.end_time).toLocaleTimeString()}\nAttendees: ${meeting.attendees.join(', ')}\nDescription: ${meeting.description || 'None'}`
+      const details = `Title: ${selectedMeeting.title}\nTime: ${new Date(selectedMeeting.start_time).toLocaleTimeString()} - ${new Date(selectedMeeting.end_time).toLocaleTimeString()}\nAttendees: ${selectedMeeting.attendees.join(', ')}\nDescription: ${selectedMeeting.description || 'None'}`
 
       let accumulated = ''
       const unsub = window.api.ai.onBriefingChunk((chunk) => {
@@ -80,7 +115,7 @@ export default function MeetingBriefingPanel({ isOpen, meeting, onClose }: Meeti
         unsub()
       }
     }
-  }, [isOpen, meeting])
+  }, [isOpen, selectedMeeting])
 
   return (
     <>
@@ -115,27 +150,79 @@ export default function MeetingBriefingPanel({ isOpen, meeting, onClose }: Meeti
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-          {meeting ? (
-            <div className="mb-6 bg-[#252528] rounded border border-[#333] p-3">
-              <h2 className="text-[#f0f0f0] font-semibold text-[14px] mb-2">{meeting.title}</h2>
-              <div className="font-mono text-[10px] text-[#888] space-y-1">
-                <p>Time: {new Date(meeting.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</p>
-                <p>Attendees: {meeting.attendees.join(', ')}</p>
-              </div>
-            </div>
-          ) : null}
-
-          {isLoading && !briefing ? (
-            <div className="flex items-center gap-2 text-[#888] font-mono text-[11px] mt-4">
-              <div className="w-3 h-3 border-2 border-[#c45d2e] border-t-transparent rounded-full animate-spin" />
-              Synthesizing context...
+          {!selectedMeeting ? (
+            <div className="flex flex-col gap-3">
+              <h3 className="text-[#a0a0a0] font-mono text-[11px] uppercase tracking-wider mb-2">Today's Meetings</h3>
+              {MOCK_TODAY_MEETINGS.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => setSelectedMeeting(m)}
+                  className="text-left bg-[#252528] border border-[#333] hover:border-[#c45d2e] rounded p-3 transition-colors group"
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[#f0f0f0] font-semibold text-[13px]">{m.title}</span>
+                    <span className="text-[#888] font-mono text-[10px]">
+                      {new Date(m.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <div className="text-[#a0a0a0] text-[12px] line-clamp-1 mb-2">
+                    {m.description}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[#666] font-mono text-[10px]">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    {m.attendees.length} attendees
+                  </div>
+                </button>
+              ))}
             </div>
           ) : (
-            <div className="prose prose-invert prose-sm max-w-none text-[#d0d0d0] text-[13px] leading-relaxed [&>h1]:text-[16px] [&>h1]:font-semibold [&>h1]:mb-3 [&>h1]:mt-6 [&>h1]:text-[#f0f0f0] [&>h2]:text-[14px] [&>h2]:font-semibold [&>h2]:mb-2 [&>h2]:mt-6 [&>h2]:text-[#f0f0f0] [&>h3]:text-[13px] [&>h3]:font-semibold [&>h3]:mb-2 [&>h3]:mt-4 [&>h3]:text-[#e0e0e0] [&>p]:mb-4 [&>ul]:list-none [&>ul]:pl-0 [&>ul]:mb-6 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-6 [&>li]:mb-4 [&>li]:pl-0 [&>pre]:bg-[#1e1e1e] [&>pre]:p-3 [&>pre]:rounded [&>pre]:mb-3 [&>code]:bg-[#1e1e1e] [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:font-mono [&>code]:text-[12px] [&>blockquote]:border-l-2 [&>blockquote]:border-[#333] [&>blockquote]:pl-3 [&>blockquote]:italic [&>blockquote]:text-[#a0a0a0] [&>blockquote]:mb-4 [&>a]:text-[#c45d2e] [&>a]:underline [&>a]:underline-offset-2">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} components={markdownComponents}>
-                {briefing}
-              </ReactMarkdown>
-            </div>
+            <>
+              <div className="mb-6 bg-[#252528] rounded border border-[#333] p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <h2 className="text-[#f0f0f0] font-semibold text-[14px]">{selectedMeeting.title}</h2>
+                  <button
+                    onClick={() => setSelectedMeeting(null)}
+                    className="text-[#666] hover:text-[#c45d2e] transition-colors font-mono text-[10px] uppercase tracking-wide border border-[#333] rounded px-1.5 py-0.5 hover:border-[#c45d2e]"
+                  >
+                    Back
+                  </button>
+                </div>
+                <div className="font-mono text-[10px] text-[#888] space-y-1">
+                  <p>Time: {new Date(selectedMeeting.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</p>
+                  <details className="group">
+                    <summary className="cursor-pointer hover:text-[#a0a0a0] transition-colors flex items-center gap-1 list-none outline-none">
+                      <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" className="opacity-50 group-open:rotate-90 transition-transform">
+                        <path d="M3 1 L7 5 L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Attendees: {selectedMeeting.attendees.length}
+                    </summary>
+                    <div className="mt-2 pl-3 space-y-1">
+                      {selectedMeeting.attendees.map((email, i) => (
+                        <div key={i} className="text-[#666] truncate">{email}</div>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+              </div>
+
+              {isLoading && !briefing ? (
+                <div className="flex items-center gap-2 text-[#888] font-mono text-[11px] mt-4">
+                  <div className="w-3 h-3 border-2 border-[#c45d2e] border-t-transparent rounded-full animate-spin" />
+                  Synthesizing context...
+                </div>
+              ) : (
+                <div className="prose prose-invert prose-sm max-w-none text-[#d0d0d0] text-[13px] leading-relaxed [&>h1]:text-[16px] [&>h1]:font-semibold [&>h1]:mb-3 [&>h1]:mt-6 [&>h1]:text-[#f0f0f0] [&>h2]:text-[14px] [&>h2]:font-semibold [&>h2]:mb-2 [&>h2]:mt-6 [&>h2]:text-[#f0f0f0] [&>h3]:text-[13px] [&>h3]:font-semibold [&>h3]:mb-2 [&>h3]:mt-4 [&>h3]:text-[#e0e0e0] [&>p]:mb-4 [&>ul]:list-none [&>ul]:pl-0 [&>ul]:mb-6 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-6 [&>li]:mb-4 [&>li]:pl-0 [&>pre]:bg-[#1e1e1e] [&>pre]:p-3 [&>pre]:rounded [&>pre]:mb-3 [&>code]:bg-[#1e1e1e] [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:font-mono [&>code]:text-[12px] [&>blockquote]:border-l-2 [&>blockquote]:border-[#333] [&>blockquote]:pl-3 [&>blockquote]:italic [&>blockquote]:text-[#a0a0a0] [&>blockquote]:mb-4 [&>a]:text-[#c45d2e] [&>a]:underline [&>a]:underline-offset-2">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} components={markdownComponents}>
+                    {briefing}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
