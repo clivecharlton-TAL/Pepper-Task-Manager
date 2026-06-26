@@ -1,54 +1,89 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
-import { broadcast } from './events'
 import type { Meeting } from '../shared/types'
 
 const execAsync = promisify(exec)
-let pollingInterval: NodeJS.Timeout | null = null
 
-// Store the ID of the meeting we most recently alerted about
-// to prevent spamming the user every 5 minutes.
-let lastAlertedMeetingId: string | null = null
-
-export function startMeetingPolling(): void {
-  if (pollingInterval) clearInterval(pollingInterval)
-  
-  // Poll immediately, then every 5 minutes
-  pollForMeetings()
-  pollingInterval = setInterval(pollForMeetings, 5 * 60 * 1000)
-}
-
-async function pollForMeetings(): Promise<void> {
+export async function fetchUpcomingMeetings(): Promise<Meeting[]> {
   try {
-    // 1. Fetch upcoming meetings via Claude CLI
-    // We ask it to fetch today's events for the next ~2 hours and output clean JSON.
-    const prompt = "Use your gws-calendar or related skills to list my upcoming meetings starting in the next 2 hours. Return ONLY a valid JSON array of objects. Each object must have: id (string), title (string), description (string, optional), start_time (ISO string), end_time (ISO string), attendees (array of strings, just names or emails), url (string, optional). Do not include markdown formatting or backticks around the JSON."
+    // Generate a JXA script to fetch from local Calendar
+    const script = `
+const app = Application('Calendar');
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+const tomorrow = new Date(today);
+tomorrow.setDate(tomorrow.getDate() + 1);
+
+const meetings = [];
+const cals = app.calendars();
+
+for (let c = 0; c < cals.length; c++) {
+  try {
+    const cal = cals[c];
+    if (cal.name() === 'Holidays' || cal.name() === 'Birthdays') continue;
+
+    const events = cal.events({
+      where: {
+        startDate: { ">=": today, "<": tomorrow }
+      }
+    });
     
-    const { stdout } = await execAsync(`claude -p "${prompt}" --bare`, {
-      env: { ...process.env, PATH: '/usr/local/bin:/opt/homebrew/bin:' + (process.env.PATH || '') }
-    })
+    for (let i = 0; i < events.length; i++) {
+      try {
+        const ev = events[i];
+        let title = ''; try { title = ev.summary(); } catch(e) {}
+        let startTime = ''; try { startTime = ev.startDate().toISOString(); } catch(e) {}
+        let endTime = ''; try { endTime = ev.endDate().toISOString(); } catch(e) {}
+        let description = ''; try { description = ev.description() || ''; } catch(e) {}
+        
+        if (!title || !startTime || !endTime) continue;
 
-    const cleanOutput = stdout.replace(/```json/g, '').replace(/```/g, '').trim()
-    const meetings: Meeting[] = JSON.parse(cleanOutput)
-    
-    if (!meetings || meetings.length === 0) return
+        let attendees = [];
+        try {
+          const rawAtt = ev.attendees();
+          for (let j = 0; j < rawAtt.length; j++) {
+            let name = '';
+            try { name = rawAtt[j].displayName(); } catch(e) {}
+            if (!name) { try { name = rawAtt[j].email(); } catch(e) {} }
+            if (name) attendees.push(name);
+          }
+        } catch(e) {}
 
-    // 2. Filter to find a meeting starting within the next 15 minutes
-    const now = new Date()
-    const fifteenMinsFromNow = new Date(now.getTime() + 15 * 60 * 1000)
-
-    const upcomingMeeting = meetings.find(m => {
-      const startTime = new Date(m.start_time)
-      return startTime > now && startTime <= fifteenMinsFromNow
-    })
-
-    // 3. Broadcast the upcoming meeting to the renderer
-    if (upcomingMeeting && upcomingMeeting.id !== lastAlertedMeetingId) {
-      lastAlertedMeetingId = upcomingMeeting.id
-      broadcast({ type: 'meeting:upcoming', meeting: upcomingMeeting })
+        meetings.push({
+          id: ev.uid() + '-' + c + '-' + i,
+          title: title,
+          description: description,
+          start_time: startTime,
+          end_time: endTime,
+          attendees: attendees,
+          url: ''
+        });
+      } catch (e) {}
     }
-
+  } catch (e) {}
+}
+JSON.stringify(meetings);
+`
+    const { stdout } = await execAsync(`osascript -l JavaScript -e "${script.replace(/"/g, '\\"')}"`)
+    const parsed = JSON.parse(stdout.trim())
+    
+    // Sort chronologically and filter out exact duplicates 
+    // (sometimes Calendar returns the same event across delegated calendars)
+    const uniqueIds = new Set()
+    const finalMeetings: Meeting[] = []
+    
+    for (const m of parsed) {
+      const dedupKey = m.title + m.start_time
+      if (!uniqueIds.has(dedupKey)) {
+        uniqueIds.add(dedupKey)
+        finalMeetings.push(m)
+      }
+    }
+    
+    finalMeetings.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    return finalMeetings
   } catch (error) {
-    console.error('Failed to poll for meetings via Claude CLI:', error)
+    console.error('Failed to fetch from local Calendar app:', error)
+    return []
   }
 }
