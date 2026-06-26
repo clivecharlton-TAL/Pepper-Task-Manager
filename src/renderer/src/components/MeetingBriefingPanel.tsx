@@ -9,33 +9,6 @@ interface MeetingBriefingPanelProps {
   onClose: () => void
 }
 
-const MOCK_TODAY_MEETINGS: Meeting[] = [
-  {
-    id: 'mock-m1',
-    title: 'Daily Standup',
-    description: 'Quick sync on active tasks and blockers.',
-    start_time: new Date(new Date().setHours(10, 0, 0, 0)).toISOString(),
-    end_time: new Date(new Date().setHours(10, 15, 0, 0)).toISOString(),
-    attendees: ['team@example.com'],
-  },
-  {
-    id: 'mock-m2',
-    title: 'Q3 Roadmap Alignment',
-    description: 'Reviewing the draft business case and test automation scaling.',
-    start_time: new Date(new Date().setHours(13, 30, 0, 0)).toISOString(),
-    end_time: new Date(new Date().setHours(14, 30, 0, 0)).toISOString(),
-    attendees: ['clive@example.com', 'leadership@example.com'],
-  },
-  {
-    id: 'mock-m3',
-    title: 'Audit & Compliance Sync',
-    description: 'Final review of the Deloitte draft report.',
-    start_time: new Date(new Date().setHours(16, 0, 0, 0)).toISOString(),
-    end_time: new Date(new Date().setHours(16, 45, 0, 0)).toISOString(),
-    attendees: ['clive@example.com', 'security@example.com'],
-  }
-]
-
 const markdownComponents: Components = {
   a: ({ node, href, children, ...props }) => {
     if (!href) return <a {...props}>{children}</a>
@@ -80,15 +53,29 @@ const markdownComponents: Components = {
 
 export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefingPanelProps) {
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
+  const [todayMeetings, setTodayMeetings] = useState<Meeting[]>([])
   const [briefing, setBriefing] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
+  const [icsUrl, setIcsUrl] = useState<string>('')
+  const [isEditingIcs, setIsEditingIcs] = useState(false)
 
-  // Reset state when panel opens/closes
+  // Reset state and fetch meetings when panel opens
   useEffect(() => {
     if (!isOpen) {
       setSelectedMeeting(null)
       setBriefing('')
+      return
     }
+
+    // Load ICS URL config
+    window.api.calendar.getIcsUrl().then(url => {
+      if (url) setIcsUrl(url)
+    })
+
+    // Fetch meetings
+    window.api.meetings.getUpcoming().then(meetings => {
+      if (meetings) setTodayMeetings(meetings)
+    })
   }, [isOpen])
 
   // Generate briefing when a meeting is selected
@@ -152,8 +139,17 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
           {!selectedMeeting ? (
             <div className="flex flex-col gap-3">
-              <h3 className="text-[#a0a0a0] font-mono text-[11px] uppercase tracking-wider mb-2">Today's Meetings</h3>
-              {MOCK_TODAY_MEETINGS.map(m => (
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-[#a0a0a0] font-mono text-[11px] uppercase tracking-wider">Today's Meetings</h3>
+              </div>
+
+              {todayMeetings.length === 0 && (
+                <div className="text-center py-8 text-[#666] font-mono text-[11px]">
+                  No meetings found on your local Calendar for today.
+                </div>
+              )}
+
+              {todayMeetings.map(m => (
                 <button
                   key={m.id}
                   onClick={() => setSelectedMeeting(m)}
@@ -166,7 +162,7 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
                     </span>
                   </div>
                   <div className="text-[#a0a0a0] text-[12px] line-clamp-1 mb-2">
-                    {m.description}
+                    {m.description || 'No description'}
                   </div>
                   <div className="flex items-center gap-1.5 text-[#666] font-mono text-[10px]">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -175,7 +171,7 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
                       <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                       <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                     </svg>
-                    {m.attendees.length} attendees
+                    {m.attendees?.length || 0} attendees
                   </div>
                 </button>
               ))}
