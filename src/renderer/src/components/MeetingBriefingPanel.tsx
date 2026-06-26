@@ -56,8 +56,7 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
   const [todayMeetings, setTodayMeetings] = useState<Meeting[]>([])
   const [briefing, setBriefing] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
-  const [icsUrl, setIcsUrl] = useState<string>('')
-  const [isEditingIcs, setIsEditingIcs] = useState(false)
+  const [isFetchingMeetings, setIsFetchingMeetings] = useState(false)
 
   // Reset state and fetch meetings when panel opens
   useEffect(() => {
@@ -67,15 +66,12 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
       return
     }
 
-    // Load ICS URL config
-    window.api.calendar.getIcsUrl().then(url => {
-      if (url) setIcsUrl(url)
-    })
-
     // Fetch meetings
+    setIsFetchingMeetings(true)
     window.api.meetings.getUpcoming().then(meetings => {
+      setIsFetchingMeetings(false)
       if (meetings) setTodayMeetings(meetings)
-    })
+    }).catch(() => setIsFetchingMeetings(false))
   }, [isOpen])
 
   // Generate briefing when a meeting is selected
@@ -143,11 +139,16 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
                 <h3 className="text-[#a0a0a0] font-mono text-[11px] uppercase tracking-wider">Today's Meetings</h3>
               </div>
 
-              {todayMeetings.length === 0 && (
+              {isFetchingMeetings ? (
+                <div className="flex items-center gap-2 text-[#888] font-mono text-[11px] mt-4">
+                  <div className="w-3 h-3 border-2 border-[#c45d2e] border-t-transparent rounded-full animate-spin" />
+                  Loading calendar...
+                </div>
+              ) : todayMeetings.length === 0 ? (
                 <div className="text-center py-8 text-[#666] font-mono text-[11px]">
                   No meetings found on your local Calendar for today.
                 </div>
-              )}
+              ) : null}
 
               {todayMeetings.map(m => (
                 <button
