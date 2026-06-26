@@ -9,7 +9,7 @@ const execAsync = promisify(exec)
 import Anthropic from '@anthropic-ai/sdk'
 import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
-import { hasApiKey, saveApiKey, streamDraft, streamQuery, streamBriefing } from './ai'
+import { hasApiKey, saveApiKey, getCalendarIcsUrl, saveCalendarIcsUrl, streamDraft, streamQuery, streamBriefing } from './ai'
 import { broadcast } from './events'
 import type { CreateTaskInput, UpdateTaskInput, TaskFilters } from '../shared/types'
 
@@ -53,6 +53,8 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('ai:has-key', () => hasApiKey())
   ipcMain.handle('ai:save-key', (_e, key: string) => { saveApiKey(key) })
+  ipcMain.handle('calendar:get-ics', () => getCalendarIcsUrl())
+  ipcMain.handle('calendar:set-ics', (_e, url: string) => saveCalendarIcsUrl(url))
   ipcMain.handle('ai:draft', async (
     event,
     title: string,
@@ -274,9 +276,13 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('meetings:upcoming', async () => {
-    // Completely removed CLI execution to stop OAuth popups.
-    // Return null to force the UI to generate a mock meeting for testing.
-    return null
+    try {
+      const meetings = await fetchUpcomingMeetings()
+      return meetings
+    } catch (error) {
+      console.error('Error fetching meetings:', error)
+      return null
+    }
   })
 
   ipcMain.handle('subtasks:list',   (_e, taskId: string) => listSubTasks(taskId))
