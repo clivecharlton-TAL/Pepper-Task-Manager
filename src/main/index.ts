@@ -6,6 +6,7 @@ import { syncLabelsFromDrive, createTask } from './db'
 import { broadcast } from './events'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
+import { startMeetingPolling } from './meetings'
 
 const LOCAL_API_PORT = 47832
 
@@ -200,6 +201,8 @@ const TRAY_ICON_BASE64 = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAY
 app.whenReady().then(async () => {
   startLocalApi()
   registerIpcHandlers()
+
+  startMeetingPolling()
 
   mainWindow = createMainWindow()
   quickAddWindow = createQuickAddWindow()

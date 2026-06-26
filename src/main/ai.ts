@@ -298,3 +298,55 @@ export async function streamDraft(
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// streamBriefing — Generates a meeting briefing based on tasks
+// ---------------------------------------------------------------------------
+
+const BRIEFING_SYSTEM_PROMPT = `You are a Chief-of-Staff assistant preparing a briefing for an upcoming meeting.
+Your goal is to review the meeting details and the user's active tasks, and synthesize a concise, actionable briefing.
+
+Highlight tasks that:
+1. Are assigned to the meeting attendees.
+2. Are related to the meeting title or description.
+3. Might be blockers or relevant context for the discussion.
+
+Use clean markdown:
+- Start with a short 1-sentence summary of the meeting's focus.
+- Use a ## Relevant Tasks section (with bullet points linking to tasks by title/status).
+- Use a ## Suggested Agenda or ## Open Questions section if applicable based on the tasks.
+
+Do not invent tasks. Only reference tasks from the provided JSON.`
+
+export async function streamBriefing(
+  meetingDetails: string,
+  tasksJson: string,
+  onChunk: (text: string) => void
+): Promise<void> {
+  const apiKey = readConfig().anthropicApiKey
+  if (!apiKey) throw new Error('NO_API_KEY')
+
+  const client = new Anthropic({ apiKey })
+  
+  const prompt = `Meeting Details:
+${meetingDetails}
+
+Active Tasks (JSON):
+${tasksJson}
+
+Please generate the briefing.`
+
+  const stream = await client.messages.create({
+    model: 'claude-3-5-sonnet-20241022',
+    max_tokens: 2048,
+    stream: true,
+    system: BRIEFING_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: prompt }]
+  })
+
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      onChunk(event.delta.text)
+    }
+  }
+}

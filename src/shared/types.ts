@@ -151,3 +151,15 @@ export interface ReportData {
   }
   labelBreakdown: LabelBreakdownItem[]
 }
+
+export interface Meeting {
+  id: string
+  title: string
+  description?: string
+  start_time: string
+  end_time: string
+  attendees: string[]
+  url?: string
+}
+
+export type DomainEventWithMeeting = DomainEvent | { type: 'meeting:upcoming'; meeting: Meeting }

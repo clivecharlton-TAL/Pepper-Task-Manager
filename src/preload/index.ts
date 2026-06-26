@@ -71,6 +71,13 @@ const api = {
       ipcRenderer.on('ai:query-action', wrapped)
       return () => ipcRenderer.removeListener('ai:query-action', wrapped)
     },
+    briefing: (meetingDetails: string): Promise<void> =>
+      ipcRenderer.invoke('ai:briefing', meetingDetails),
+    onBriefingChunk: (fn: (chunk: string) => void): () => void => {
+      const wrapped = (_e: Electron.IpcRendererEvent, chunk: string) => fn(chunk)
+      ipcRenderer.on('ai:briefing-chunk', wrapped)
+      return () => ipcRenderer.removeListener('ai:briefing-chunk', wrapped)
+    },
   },
   wallpapers: {
     list: (): Promise<string[]> => ipcRenderer.invoke('wallpapers:list'),

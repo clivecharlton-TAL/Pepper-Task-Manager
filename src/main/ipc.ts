@@ -9,7 +9,7 @@ const execAsync = promisify(exec)
 import Anthropic from '@anthropic-ai/sdk'
 import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
-import { hasApiKey, saveApiKey, streamDraft, streamQuery } from './ai'
+import { hasApiKey, saveApiKey, streamDraft, streamQuery, streamBriefing } from './ai'
 import { broadcast } from './events'
 import type { CreateTaskInput, UpdateTaskInput, TaskFilters } from '../shared/types'
 
@@ -227,6 +227,15 @@ export function registerIpcHandlers(): void {
         }
       }
     )
+  })
+
+  ipcMain.handle('ai:briefing', async (event, meetingDetails: string) => {
+    const tasks = await getTasks()
+    const tasksJson = JSON.stringify(tasks.filter(t => t.status !== 'done'))
+
+    await streamBriefing(meetingDetails, tasksJson, (chunk) => {
+      if (!event.sender.isDestroyed()) event.sender.send('ai:briefing-chunk', chunk)
+    })
   })
 
   ipcMain.handle('subtasks:list',   (_e, taskId: string) => listSubTasks(taskId))
