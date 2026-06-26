@@ -2,6 +2,11 @@ import { ipcMain, shell } from 'electron'
 import { join, extname } from 'path'
 import { homedir } from 'os'
 import { readFileSync, statSync, existsSync, readdirSync } from 'fs'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+
+const execAsync = promisify(exec)
+import Anthropic from '@anthropic-ai/sdk'
 import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
 import { hasApiKey, saveApiKey, streamDraft, streamQuery } from './ai'
@@ -55,24 +60,90 @@ export function registerIpcHandlers(): void {
     linkRefs: { name: string; url: string }[]
   ) => {
     const TEXT_EXTS = new Set(['.txt','.md','.markdown','.csv','.json','.js','.ts','.jsx','.tsx','.py','.html','.css','.xml','.yaml','.yml','.sh','.log','.conf','.toml','.ini','.sql'])
+    const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp'])
+    const PDF_EXTS = new Set(['.pdf'])
+    const GOOGLE_EXTS = new Set(['.gdoc', '.gsheet', '.gslides'])
     const MAX_BYTES = 30_000
 
     const read: { name: string; sizeKb: number }[] = []
     const skipped: { name: string; reason: string }[] = []
+    const contentBlocksForAI: Anthropic.MessageParam['content'] = []
+    const googleUrlsToFetch: { name: string; url: string }[] = []
 
-    const attachments = (attachmentPaths ?? []).map(p => {
+    for (const p of attachmentPaths ?? []) {
       const name = p.split('/').pop() ?? p
       try {
-        if (!existsSync(p)) { skipped.push({ name, reason: 'file not found' }); return null }
+        if (!existsSync(p)) {
+          skipped.push({ name, reason: 'file not found' })
+          continue
+        }
+
         const ext = extname(p).toLowerCase()
-        if (!TEXT_EXTS.has(ext)) { skipped.push({ name, reason: 'format not supported' }); return null }
-        const raw = readFileSync(p, 'utf-8')
-        const size = statSync(p).size
-        const content = size > MAX_BYTES ? raw.slice(0, MAX_BYTES) + '\n…[truncated]' : raw
-        read.push({ name, sizeKb: Math.round(size / 102.4) / 10 })
-        return { name, content }
-      } catch { skipped.push({ name, reason: 'read error' }); return null }
-    }).filter((a): a is { name: string; content: string } => a !== null)
+        const stats = statSync(p)
+        const sizeKb = Math.round(stats.size / 102.4) / 10
+
+        if (GOOGLE_EXTS.has(ext)) {
+          const raw = readFileSync(p, 'utf-8')
+          try {
+            const parsed = JSON.parse(raw)
+            if (parsed.url) {
+              googleUrlsToFetch.push({ name, url: parsed.url })
+              read.push({ name, sizeKb }) // Mark as read since we will fetch it
+            } else {
+              skipped.push({ name, reason: 'invalid google shortcut file' })
+            }
+          } catch {
+            skipped.push({ name, reason: 'invalid google shortcut file (not JSON)' })
+          }
+        } else if (TEXT_EXTS.has(ext)) {
+          const raw = readFileSync(p, 'utf-8')
+          const content = stats.size > MAX_BYTES ? raw.slice(0, MAX_BYTES) + '\n…[truncated]' : raw
+          contentBlocksForAI.push({ type: 'text', text: `### ${name}\n${content}` })
+          read.push({ name, sizeKb })
+        } else if (IMAGE_EXTS.has(ext)) {
+          const buffer = readFileSync(p)
+          let media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' = 'image/jpeg'
+          if (ext === '.png') media_type = 'image/png'
+          else if (ext === '.gif') media_type = 'image/gif'
+          else if (ext === '.webp') media_type = 'image/webp'
+
+          contentBlocksForAI.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type,
+              data: buffer.toString('base64'),
+            },
+          })
+          read.push({ name, sizeKb })
+        } else if (PDF_EXTS.has(ext)) {
+          const buffer = readFileSync(p)
+          contentBlocksForAI.push({
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: buffer.toString('base64'),
+            },
+            // Claude uses 'document' blocks for PDF parsing (supported in claude-3-5-sonnet-20241022)
+          } as any)
+          read.push({ name, sizeKb })
+        } else {
+          skipped.push({ name, reason: 'format not supported' })
+        }
+      } catch (error) {
+        skipped.push({ name, reason: `read error: ${(error as Error).message}` })
+      }
+    }
+
+    // Check linkRefs for Google Workspace URLs
+    for (const link of linkRefs ?? []) {
+      if (link.url.includes('docs.google.com') || link.url.includes('sheets.google.com') || link.url.includes('slides.google.com')) {
+        if (!googleUrlsToFetch.some(g => g.url === link.url)) {
+          googleUrlsToFetch.push({ name: link.name, url: link.url })
+        }
+      }
+    }
 
     if (!event.sender.isDestroyed()) {
       event.sender.send('ai:draft-context', {
@@ -82,7 +153,36 @@ export function registerIpcHandlers(): void {
       })
     }
 
-    await streamDraft(title, attachments, linkRefs ?? [], (chunk) => {
+    if (googleUrlsToFetch.length > 0) {
+      if (!event.sender.isDestroyed()) {
+        event.sender.send('ai:chunk', `_Fetching ${googleUrlsToFetch.length} Google Workspace document(s) via Claude CLI..._\n\n`)
+      }
+
+      await Promise.all(googleUrlsToFetch.map(async (doc) => {
+        try {
+          if (!event.sender.isDestroyed()) {
+            event.sender.send('ai:chunk', `_Reading ${doc.name}..._\n`)
+          }
+
+          const { stdout } = await execAsync(`claude -p "Read the content of this Google Workspace document and output ONLY the raw text, nothing else. Do not use any markdown formatting or pleasantries, just output the exact text content: ${doc.url}" --bare`, {
+            env: { ...process.env, PATH: '/usr/local/bin:/opt/homebrew/bin:' + (process.env.PATH || '') }
+          })
+
+          contentBlocksForAI.push({ type: 'text', text: `### Google Document: ${doc.name}\nURL: ${doc.url}\n\n${stdout.trim()}` })
+        } catch (error) {
+          console.error(`Failed to fetch Google Workspace doc ${doc.url}:`, error)
+          if (!event.sender.isDestroyed()) {
+            event.sender.send('ai:chunk', `_Failed to read ${doc.name}._\n`)
+          }
+        }
+      }))
+
+      if (!event.sender.isDestroyed()) {
+        event.sender.send('ai:chunk', `\n`)
+      }
+    }
+
+    await streamDraft(title, contentBlocksForAI, linkRefs ?? [], (chunk) => {
       if (!event.sender.isDestroyed()) event.sender.send('ai:chunk', chunk)
     })
   })
