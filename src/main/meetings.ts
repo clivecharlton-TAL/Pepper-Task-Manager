@@ -21,11 +21,14 @@ for (let c = 0; c < cals.length; c++) {
     const cal = cals[c];
     if (cal.name() === 'Holidays' || cal.name() === 'Birthdays' || cal.name().includes('Holidays') || cal.name() === 'Siri Suggestions' || cal.name() === 'Scheduled Reminders') continue;
 
-    const events = cal.events({
-      where: {
-        startDate: { ">=": today, "<": tomorrow }
-      }
-    });
+    // Use .whose() to execute the query natively in Apple Events
+    // rather than dragging thousands of events into the JXA runtime.
+    const events = cal.events.whose({
+      _and: [
+        { startDate: { ">=": today } },
+        { startDate: { "<": tomorrow } }
+      ]
+    })();
     
     for (let i = 0; i < events.length; i++) {
       try {
@@ -33,6 +36,7 @@ for (let c = 0; c < cals.length; c++) {
         let title = ''; try { title = ev.summary(); } catch(e) {}
         let startTime = ''; try { startTime = ev.startDate().toISOString(); } catch(e) {}
         let endTime = ''; try { endTime = ev.endDate().toISOString(); } catch(e) {}
+        let description = ''; try { description = ev.description() || ''; } catch(e) {}
         
         const isAllDay = (ev.alldayEvent && ev.alldayEvent()) || 
                          (ev.startDate().getHours() === 0 && ev.endDate().getHours() === 0) ||
@@ -40,17 +44,24 @@ for (let c = 0; c < cals.length; c++) {
         
         if (!title || !startTime || !endTime || isAllDay) continue;
 
-        // CRITICAL FIX: We are skipping fetching attendees because the AppleScript bridge 
-        // completely hangs and freezes when trying to extract attendees from busy calendars.
-        // We also skip descriptions to ensure it executes in under 1 second.
-        
+        let attendees = [];
+        try {
+          const rawAtt = ev.attendees();
+          for (let j = 0; j < rawAtt.length; j++) {
+            let name = '';
+            try { name = rawAtt[j].displayName(); } catch(e) {}
+            if (!name) { try { name = rawAtt[j].email(); } catch(e) {} }
+            if (name) attendees.push(name);
+          }
+        } catch(e) {}
+
         meetings.push({
           id: ev.uid() + '-' + c + '-' + i,
           title: title,
-          description: '',
+          description: description,
           start_time: startTime,
           end_time: endTime,
-          attendees: [],
+          attendees: attendees,
           url: ''
         });
       } catch (e) {}
