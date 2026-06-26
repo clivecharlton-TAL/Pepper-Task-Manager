@@ -11,6 +11,7 @@ import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, sy
 import { listFiles, openFile, revealFile, createFolder } from './files'
 import { hasApiKey, saveApiKey, getCalendarIcsUrl, saveCalendarIcsUrl, streamDraft, streamQuery, streamBriefing } from './ai'
 import { broadcast } from './events'
+import { fetchUpcomingMeetings } from './meetings'
 import type { CreateTaskInput, UpdateTaskInput, TaskFilters } from '../shared/types'
 
 export function registerIpcHandlers(): void {
