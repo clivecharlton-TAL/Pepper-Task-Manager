@@ -15,73 +15,67 @@ const tomorrow = new Date(today);
 tomorrow.setDate(tomorrow.getDate() + 1);
 
 const meetings = [];
-const cals = app.calendars();
+const mainCal = app.calendars.byName('clive.charlton@takealot.com');
 
-for (let c = 0; c < cals.length; c++) {
-  try {
-    const cal = cals[c];
-    if (cal.name() === 'Holidays' || cal.name() === 'Birthdays' || cal.name().includes('Holidays') || cal.name() === 'Siri Suggestions' || cal.name() === 'Scheduled Reminders') continue;
+try {
+  // Use a strict start date filter on the primary calendar to keep it from hanging
+  const events = mainCal.events.whose({ startDate: { ">=": today } })();
+  
+  for (let i = 0; i < events.length; i++) {
+    try {
+      const ev = events[i];
+      let startTime = ''; try { startTime = ev.startDate().toISOString(); } catch(e) {}
+      
+      const start = new Date(startTime);
+      if (start >= tomorrow) {
+        break; // Events are chronologically sorted, so break when we hit tomorrow
+      }
 
-    const events = cal.events.whose({
-      _and: [
-        { startDate: { ">=": today } },
-        { startDate: { "<": tomorrow } }
-      ]
-    })();
-    
-    for (let i = 0; i < events.length; i++) {
+      let title = ''; try { title = ev.summary(); } catch(e) {}
+      let endTime = ''; try { endTime = ev.endDate().toISOString(); } catch(e) {}
+      
+      const isAllDay = (ev.alldayEvent && ev.alldayEvent()) || 
+                       (ev.startDate().getHours() === 0 && ev.endDate().getHours() === 0) ||
+                       (ev.startDate().getHours() === 2 && ev.endDate().getHours() === 2 && ev.startDate().getMinutes() === 0 && ev.endDate().getMinutes() === 0);
+      
+      if (!title || !startTime || !endTime || isAllDay) continue;
+
+      let attendees = [];
       try {
-        const ev = events[i];
-        let title = ''; try { title = ev.summary(); } catch(e) {}
-        let startTime = ''; try { startTime = ev.startDate().toISOString(); } catch(e) {}
-        let endTime = ''; try { endTime = ev.endDate().toISOString(); } catch(e) {}
-        
-        const isAllDay = (ev.alldayEvent && ev.alldayEvent()) || 
-                         (ev.startDate().getHours() === 0 && ev.endDate().getHours() === 0) ||
-                         (ev.startDate().getHours() === 2 && ev.endDate().getHours() === 2 && ev.startDate().getMinutes() === 0 && ev.endDate().getMinutes() === 0);
-        
-        if (!title || !startTime || !endTime || isAllDay) continue;
+        const rawAtt = ev.attendees();
+        for (let j = 0; j < rawAtt.length; j++) {
+          let name = '';
+          try { name = rawAtt[j].displayName(); } catch(e) {}
+          if (!name) { try { name = rawAtt[j].email(); } catch(e) {} }
+          if (name) attendees.push(name);
+        }
+      } catch(e) {}
 
-        let attendees = [];
-        try {
-          const rawAtt = ev.attendees();
-          for (let j = 0; j < rawAtt.length; j++) {
-            let name = '';
-            try { name = rawAtt[j].displayName(); } catch(e) {}
-            if (!name) { try { name = rawAtt[j].email(); } catch(e) {} }
-            if (name) attendees.push(name);
-          }
-        } catch(e) {}
-
-        meetings.push({
-          id: ev.uid() + '-' + c + '-' + i,
-          title: title,
-          description: '',
-          start_time: startTime,
-          end_time: endTime,
-          attendees: attendees,
-          url: ''
-        });
-      } catch (e) {}
-    }
-  } catch (e) {}
-}
+      meetings.push({
+        id: ev.uid() + '-' + i,
+        title: title,
+        description: '',
+        start_time: startTime,
+        end_time: endTime,
+        attendees: attendees,
+        url: ''
+      });
+    } catch (e) {}
+  }
+} catch (e) {}
 
 const finalMeetings = meetings.filter(m => {
   const start = new Date(m.start_time);
   const end = new Date(m.end_time);
-
-  // A meeting belongs to "today" if it starts today, OR if it started before today but ends today or later
   const startsToday = start >= today && start < tomorrow;
   const spansToday = start < today && end > today;
-
   return startsToday || spansToday;
 });
 
 JSON.stringify(finalMeetings);
 `
     const { stdout } = await execAsync(`osascript -l JavaScript -e "${script.replace(/"/g, '\\"')}"`, {
-      timeout: 15000 // Increase timeout just in case attendee extraction is slow
+      timeout: 10000 
     })
     const parsed = JSON.parse(stdout.trim())
     
