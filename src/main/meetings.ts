@@ -8,7 +8,8 @@ export async function fetchUpcomingMeetings(dateString?: string): Promise<Meetin
   try {
     const script = `
 const app = Application('Calendar');
-const today = ${dateString ? `new Date("${dateString}")` : `new Date()`};
+const targetDateStr = ${dateString ? `"${dateString}"` : `null`};
+const today = targetDateStr ? new Date(targetDateStr) : new Date();
 today.setHours(0, 0, 0, 0);
 const tomorrow = new Date(today);
 tomorrow.setDate(tomorrow.getDate() + 1);
@@ -68,7 +69,13 @@ for (let c = 0; c < cals.length; c++) {
 
 const finalMeetings = meetings.filter(m => {
   const start = new Date(m.start_time);
-  return start >= today && start < tomorrow;
+  const end = new Date(m.end_time);
+
+  // A meeting belongs to "today" if it starts today, OR if it started before today but ends today or later
+  const startsToday = start >= today && start < tomorrow;
+  const spansToday = start < today && end > today;
+
+  return startsToday || spansToday;
 });
 
 JSON.stringify(finalMeetings);
