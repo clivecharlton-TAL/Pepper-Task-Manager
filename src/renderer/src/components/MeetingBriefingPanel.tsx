@@ -38,10 +38,16 @@ const markdownComponents: Components = {
     if (href.startsWith('https://task.internal/')) {
       return (
         <div className="flex items-start gap-2 mt-4 mb-2">
-          <span className="inline-flex items-center gap-2 text-[#e0e0e0] font-medium cursor-default text-[13px]">
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-[#c45d2e] shrink-0 translate-y-[2px]">
-              <rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M5 7L6.5 8.5L9 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <span className="inline-flex items-start gap-2 text-[#e0e0e0] font-medium cursor-default text-[13px]">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-[#888888] shrink-0 mt-1">
+              <path
+                d="M7.3 1.5 A1.2 1.2 0 0 0 6.5 1.2 H2.3 A1.2 1.2 0 0 0 1.2 2.3 V6.5 A1.2 1.2 0 0 0 1.5 7.3 L6.6 12.4 A1.4 1.4 0 0 0 8.6 12.4 L12.4 8.6 A1.4 1.4 0 0 0 12.4 6.6 Z"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="4.4" cy="4.4" r="0.9" fill="currentColor"/>
             </svg>
             <span className="flex-1 leading-snug">{children}</span>
           </span>
