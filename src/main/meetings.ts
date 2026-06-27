@@ -1,5 +1,7 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import * as os from 'os'
+import * as path from 'path'
 import type { Meeting } from '../shared/types'
 
 const execAsync = promisify(exec)
@@ -16,11 +18,12 @@ export async function fetchUpcomingMeetings(dateString?: string): Promise<Meetin
 
     // Apple CoreData stores dates as seconds since Jan 1, 2001
     const MAC_EPOCH = 978307200;
-    const startMac = (startOfDay.getTime() / 1000) - MAC_EPOCH;
-    const endMac = (endOfDay.getTime() / 1000) - MAC_EPOCH;
+    // Pad by +/- 24 hours (86400 seconds) to ensure timezone boundary safety in UTC
+    const startMac = (startOfDay.getTime() / 1000) - MAC_EPOCH - 86400;
+    const endMac = (endOfDay.getTime() / 1000) - MAC_EPOCH + 86400;
 
     const query = `
-      SELECT 
+      SELECT
         item.ROWID as id,
         item.summary as title,
         item.description as description,
@@ -30,24 +33,29 @@ export async function fetchUpcomingMeetings(dateString?: string): Promise<Meetin
       FROM CalendarItem item
       JOIN Calendar cal ON item.calendar_id = cal.ROWID
       WHERE cal.title = 'clive.charlton@takealot.com'
-        AND item.start_date >= ${startMac} 
+        AND item.start_date >= ${startMac}
         AND item.start_date < ${endMac};
     `;
 
-    const dbPath = '~/Library/Group\\ Containers/group.com.apple.calendar/Calendar.sqlitedb';
-    const { stdout } = await execAsync(`sqlite3 -json ${dbPath} "${query.replace(/\n/g, ' ')}"`);
-    
+    const dbPath = path.join(os.homedir(), 'Library', 'Group Containers', 'group.com.apple.calendar', 'Calendar.sqlitedb');
+    const { stdout } = await execAsync(`sqlite3 -json "${dbPath}" "${query.replace(/\n/g, ' ')}"`);
+
     if (!stdout || stdout.trim() === '') return [];
-    
+
     const rows = JSON.parse(stdout.trim());
-    const finalMeetings: Meeting[] = [];
+    let finalMeetings: Meeting[] = [];
 
     for (const row of rows) {
       if (row.is_all_day) continue;
-      
+
       const start = new Date((row.start_time + MAC_EPOCH) * 1000);
       const end = new Date((row.end_time + MAC_EPOCH) * 1000);
-      
+
+      // Filter exactly to the target day in JavaScript
+      const startsToday = start >= startOfDay && start < endOfDay;
+      const spansToday = start < startOfDay && end > startOfDay;
+      if (!startsToday && !spansToday) continue;
+
       // Some holidays use exact midnight boundaries instead of the all_day flag
       if (start.getHours() === 0 && end.getHours() === 0 && start.getMinutes() === 0 && end.getMinutes() === 0) continue;
 

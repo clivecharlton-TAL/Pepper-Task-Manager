@@ -49,30 +49,29 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
 
       if (href.startsWith('https://task.internal/')) {
         const taskId = href.replace('https://task.internal/', '')
-        const handleTaskClick = () => {
+        const handleTaskClick = (e: React.MouseEvent) => {
+          e.preventDefault()
           const task = allTasks.find(t => t.id === taskId)
           if (task) setDetailTask(task)
         }
 
         return (
-          <div className="flex items-start gap-2 mt-4 mb-2">
-            <button
-              onClick={handleTaskClick}
-              className="inline-flex items-start gap-2 text-[#e0e0e0] font-medium cursor-pointer text-[13px] hover:text-[#c45d2e] transition-colors text-left"
-            >
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-[#c45d2e] shrink-0 mt-1">
-                <path
-                  d="M7.3 1.5 A1.2 1.2 0 0 0 6.5 1.2 H2.3 A1.2 1.2 0 0 0 1.2 2.3 V6.5 A1.2 1.2 0 0 0 1.5 7.3 L6.6 12.4 A1.4 1.4 0 0 0 8.6 12.4 L12.4 8.6 A1.4 1.4 0 0 0 12.4 6.6 Z"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle cx="4.4" cy="4.4" r="0.9" fill="currentColor"/>
-              </svg>
-              <span className="flex-1 leading-snug">{children}</span>
-            </button>
-          </div>
+          <span
+            onClick={handleTaskClick}
+            className="inline-flex items-center gap-1.5 text-[#e0e0e0] font-medium cursor-pointer text-[13px] hover:text-[#c45d2e] transition-colors align-baseline mx-0.5 group"
+          >
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-[#c45d2e] shrink-0 translate-y-[1px]">
+              <path
+                d="M7.3 1.5 A1.2 1.2 0 0 0 6.5 1.2 H2.3 A1.2 1.2 0 0 0 1.2 2.3 V6.5 A1.2 1.2 0 0 0 1.5 7.3 L6.6 12.4 A1.4 1.4 0 0 0 8.6 12.4 L12.4 8.6 A1.4 1.4 0 0 0 12.4 6.6 Z"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="4.4" cy="4.4" r="0.9" fill="currentColor"/>
+            </svg>
+            <span className="underline decoration-[#555] underline-offset-2 group-hover:decoration-[#c45d2e] leading-none">{children}</span>
+          </span>
         )
       }
 
@@ -270,7 +269,7 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
                   Synthesizing context...
                 </div>
               ) : (
-                <div className="prose prose-invert prose-sm max-w-none text-[#d0d0d0] text-[13px] leading-relaxed [&_strong]:text-[#c45d2e] [&_strong]:font-semibold [&>h1]:text-[16px] [&>h1]:font-semibold [&>h1]:mb-3 [&>h1]:mt-6 [&>h1]:text-[#f0f0f0] [&>h2]:text-[14px] [&>h2]:font-semibold [&>h2]:mb-2 [&>h2]:mt-6 [&>h2]:text-[#f0f0f0] [&>h3]:text-[13px] [&>h3]:font-semibold [&>h3]:mb-2 [&>h3]:mt-4 [&>h3]:text-[#e0e0e0] [&>p]:mb-4 [&>ul]:list-none [&>ul]:pl-0 [&>ul]:mb-6 [&>ol]:list-none [&>ol]:pl-0 [&>ol]:mb-6 [&>li]:mb-5 [&>li]:pl-0 [&>pre]:bg-[#1e1e1e] [&>pre]:p-3 [&>pre]:rounded [&>pre]:mb-3 [&>code]:bg-[#1e1e1e] [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:font-mono [&>code]:text-[12px] [&>blockquote]:border-l-2 [&>blockquote]:border-[#333] [&>blockquote]:pl-3 [&>blockquote]:italic [&>blockquote]:text-[#a0a0a0] [&>blockquote]:mb-4 [&>a]:text-[#c45d2e] [&>a]:underline [&>a]:underline-offset-2">
+                <div className="prose prose-invert prose-sm max-w-none text-[#d0d0d0] text-[13px] leading-relaxed [&_strong]:text-[#c45d2e] [&_strong]:font-semibold [&>h1]:text-[16px] [&>h1]:font-semibold [&>h1]:mb-3 [&>h1]:mt-6 [&>h1]:text-[#f0f0f0] [&>h2]:text-[14px] [&>h2]:font-semibold [&>h2]:mb-2 [&>h2]:mt-6 [&>h2]:text-[#f0f0f0] [&>h3]:text-[13px] [&>h3]:font-semibold [&>h3]:mb-2 [&>h3]:mt-4 [&>h3]:text-[#e0e0e0] [&>p]:mb-4 [&>ul]:list-none [&>ul]:pl-0 [&>ul]:mb-6 [&>ol]:list-none [&>ol]:pl-0 [&>ol]:mb-6 [&>li]:mb-4 [&>li]:pl-0 [&>pre]:bg-[#1e1e1e] [&>pre]:p-3 [&>pre]:rounded [&>pre]:mb-3 [&>code]:bg-[#1e1e1e] [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:font-mono [&>code]:text-[12px] [&>blockquote]:border-l-2 [&>blockquote]:border-[#333] [&>blockquote]:pl-3 [&>blockquote]:italic [&>blockquote]:text-[#a0a0a0] [&>blockquote]:mb-4 [&>a]:text-[#c45d2e] [&>a]:underline [&>a]:underline-offset-2">
                   <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} components={markdownComponents}>
                     {briefing}
                   </ReactMarkdown>

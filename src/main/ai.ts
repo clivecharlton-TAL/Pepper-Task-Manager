@@ -321,9 +321,10 @@ Use clean markdown:
 - Use a ## Relevant Tasks section.
 - Use a ## Suggested Agenda or ## Open Questions section if applicable based on the tasks.
 
-CRITICAL FORMATTING RULES FOR SUGGESTED AGENDA:
-1. You MUST separate each agenda item with a blank line. Do not output agenda items immediately after each other.
-2. Example:
+CRITICAL FORMATTING RULES FOR SUGGESTED AGENDA AND OPEN QUESTIONS:
+1. You MUST separate each agenda item or open question with a blank line. Do not output items immediately after each other.
+2. Structure each item with a bold title, followed by a colon and the description.
+3. Example:
    **Item 1:** description...
 
    **Item 2:** description...
@@ -363,7 +364,7 @@ ${tasksJson}
 Please generate the briefing.`
 
   const stream = await client.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-4-6',
     max_tokens: 2048,
     stream: true,
     system: BRIEFING_SYSTEM_PROMPT,
