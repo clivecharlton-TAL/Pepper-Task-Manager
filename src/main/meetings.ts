@@ -17,35 +17,45 @@ tomorrow.setDate(tomorrow.getDate() + 1);
 const meetings = [];
 const cals = app.calendars();
 
+// The previous script was looping through ALL calendars, which includes huge archives,
+// shared team calendars, holiday lists, etc. We must ONLY query the primary calendar
+// to prevent the AppleScript bridge from choking.
 for (let c = 0; c < cals.length; c++) {
   try {
     const cal = cals[c];
-    const name = cal.name();
-    if (name === 'Holidays' || name === 'Birthdays' || name.includes('Holidays') || name === 'Siri Suggestions' || name === 'Scheduled Reminders') continue;
+    if (cal.name() !== 'clive.charlton@takealot.com') continue;
 
-    // Use a strict start date filter on the primary calendar to keep it from hanging
-    // We cannot use both >= and < inside the AppleEvent bridge because it times out on massive calendars
-    // We only use >= today, and then break early in the JS loop when we hit tomorrow.
-    const events = cal.events.whose({ startDate: { ">=": today } })();
-
+    // We do NOT use the .whose() query. As proven by testing, .whose() crashes the OS 
+    // bridge completely when querying heavy corporate Exchange/Google calendars via Calendar.app.
+    // Instead, we just call .events() which gives us a chronological list, and we iterate.
+    const events = cal.events();
+    
+    // Iterate forwards. Because it's chronological, we can break entirely once we pass tomorrow.
     for (let i = 0; i < events.length; i++) {
       try {
         const ev = events[i];
         let startTime = ''; try { startTime = ev.startDate().toISOString(); } catch(e) {}
-
+        
         const start = new Date(startTime);
         if (start >= tomorrow) {
-          break; // Events are chronologically sorted, so break when we hit tomorrow
+          break; // Stop parsing completely
         }
+        
+        let endTime = ''; try { endTime = ev.endDate().toISOString(); } catch(e) {}
+        const end = new Date(endTime);
+        
+        const startsToday = start >= today && start < tomorrow;
+        const spansToday = start < today && end > today;
+        
+        if (!startsToday && !spansToday) continue;
 
         let title = ''; try { title = ev.summary(); } catch(e) {}
-        let endTime = ''; try { endTime = ev.endDate().toISOString(); } catch(e) {}
-
-        const isAllDay = (ev.alldayEvent && ev.alldayEvent()) ||
-                         (ev.startDate().getHours() === 0 && ev.endDate().getHours() === 0) ||
-                         (ev.startDate().getHours() === 2 && ev.endDate().getHours() === 2 && ev.startDate().getMinutes() === 0 && ev.endDate().getMinutes() === 0);
-
-        if (!title || !startTime || !endTime || isAllDay) continue;
+        
+        const isAllDay = (ev.alldayEvent && ev.alldayEvent()) || 
+                         (start.getHours() === 0 && end.getHours() === 0) ||
+                         (start.getHours() === 2 && end.getHours() === 2 && start.getMinutes() === 0 && end.getMinutes() === 0);
+        
+        if (!title || isAllDay) continue;
 
         meetings.push({
           id: ev.uid() + '-' + c + '-' + i,
@@ -64,18 +74,15 @@ for (let c = 0; c < cals.length; c++) {
 const finalMeetings = meetings.filter(m => {
   const start = new Date(m.start_time);
   const end = new Date(m.end_time);
-
-  // A meeting belongs to "today" if it starts today, OR if it started before today but ends today or later
   const startsToday = start >= today && start < tomorrow;
   const spansToday = start < today && end > today;
-
   return startsToday || spansToday;
 });
 
 JSON.stringify(finalMeetings);
 `
     const { stdout } = await execAsync(`osascript -l JavaScript -e "${script.replace(/"/g, '\\"')}"`, {
-      timeout: 10000 // Give it max 10 seconds to respond so it doesn't freeze the app forever
+      timeout: 10000 
     })
     const parsed = JSON.parse(stdout.trim())
     
