@@ -152,34 +152,34 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const d = new Date(viewDate)
+                  d.setDate(d.getDate() - 1)
+                  setViewDate(d)
+                }}
+                className="text-[#666] hover:text-[#f0f0f0] transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+              <h3 className="text-[#a0a0a0] font-mono text-[11px] uppercase tracking-wider min-w-[140px] text-center">{headerText}</h3>
+              <button
+                onClick={() => {
+                  const d = new Date(viewDate)
+                  d.setDate(d.getDate() + 1)
+                  setViewDate(d)
+                }}
+                className="text-[#666] hover:text-[#f0f0f0] transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+          </div>
+
           {!selectedMeeting ? (
             <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      const d = new Date(viewDate)
-                      d.setDate(d.getDate() - 1)
-                      setViewDate(d)
-                    }}
-                    className="text-[#666] hover:text-[#f0f0f0] transition-colors"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                  </button>
-                  <h3 className="text-[#a0a0a0] font-mono text-[11px] uppercase tracking-wider">{headerText}</h3>
-                  <button
-                    onClick={() => {
-                      const d = new Date(viewDate)
-                      d.setDate(d.getDate() + 1)
-                      setViewDate(d)
-                    }}
-                    className="text-[#666] hover:text-[#f0f0f0] transition-colors"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                  </button>
-                </div>
-              </div>
-
               {isFetchingMeetings ? (
                 <div className="flex items-center gap-2 text-[#888] font-mono text-[11px] mt-4">
                   <div className="w-3 h-3 border-2 border-[#c45d2e] border-t-transparent rounded-full animate-spin" />
@@ -224,7 +224,10 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
                 <div className="flex items-start justify-between mb-2">
                   <h2 className="text-[#f0f0f0] font-semibold text-[14px]">{selectedMeeting.title}</h2>
                   <button
-                    onClick={() => setSelectedMeeting(null)}
+                    onClick={() => {
+                      setSelectedMeeting(null)
+                      setBriefing('')
+                    }}
                     className="text-[#666] hover:text-[#c45d2e] transition-colors font-mono text-[10px] uppercase tracking-wide border border-[#333] rounded px-1.5 py-0.5 hover:border-[#c45d2e]"
                   >
                     Back
