@@ -20,9 +20,15 @@ const markdownComponents: Components = {
           className="font-mono text-[11px] tracking-wide mx-1 inline-flex items-center gap-1.5 align-baseline"
           style={{ color: colour }}
         >
-          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7.5 1.5 L12.5 1.5 L12.5 6.5 L6.5 12.5 C5.5 13.5 4 13.5 3 12.5 L1.5 11 C0.5 10 0.5 8.5 1.5 7.5 L7.5 1.5 Z"/>
-            <circle cx="9.5" cy="4.5" r="1" fill="currentColor" stroke="none"/>
+          <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 translate-y-[1px]">
+            <path
+              d="M7.3 1.5 A1.2 1.2 0 0 0 6.5 1.2 H2.3 A1.2 1.2 0 0 0 1.2 2.3 V6.5 A1.2 1.2 0 0 0 1.5 7.3 L6.6 12.4 A1.4 1.4 0 0 0 8.6 12.4 L12.4 8.6 A1.4 1.4 0 0 0 12.4 6.6 Z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle cx="4.4" cy="4.4" r="0.9" fill="currentColor"/>
           </svg>
           {children}
         </span>
