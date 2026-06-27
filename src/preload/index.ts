@@ -84,7 +84,7 @@ const api = {
     setIcsUrl: (url: string): Promise<void> => ipcRenderer.invoke('calendar:set-ics', url),
   },
   meetings: {
-    getUpcoming: (): Promise<any> => ipcRenderer.invoke('meetings:upcoming'),
+    getUpcoming: (dateString?: string): Promise<any> => ipcRenderer.invoke('meetings:upcoming', dateString),
   },
   wallpapers: {
     list: (): Promise<string[]> => ipcRenderer.invoke('wallpapers:list'),
