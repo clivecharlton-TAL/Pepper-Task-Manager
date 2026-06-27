@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
-import type { Meeting } from '../../../shared/types'
+import { useState, useEffect, useMemo } from 'react'
+import type { Meeting, Task } from '../../../shared/types'
+import { useTaskStore } from '../stores/taskStore'
+import TaskDetailModal from './Kanban/TaskDetailModal'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -9,37 +11,28 @@ interface MeetingBriefingPanelProps {
   onClose: () => void
 }
 
-const markdownComponents: Components = {
-  a: ({ node, href, children, ...props }) => {
-    if (!href) return <a {...props}>{children}</a>
+export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefingPanelProps) {
+  const { allTasks } = useTaskStore()
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
+  const [todayMeetings, setTodayMeetings] = useState<Meeting[]>([])
+  const [viewDate, setViewDate] = useState<Date>(new Date())
+  const [briefing, setBriefing] = useState<string>('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [isFetchingMeetings, setIsFetchingMeetings] = useState(false)
+  const [detailTask, setDetailTask] = useState<Task | null>(null)
 
-    if (href.startsWith('https://label.internal/')) {
-      const colour = href.replace('https://label.internal/', '')
-      return (
-        <span
-          className="font-mono text-[11px] tracking-wide mx-1 inline-flex items-center gap-1.5 align-baseline"
-          style={{ color: colour }}
-        >
-          <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 translate-y-[1px]">
-            <path
-              d="M7.3 1.5 A1.2 1.2 0 0 0 6.5 1.2 H2.3 A1.2 1.2 0 0 0 1.2 2.3 V6.5 A1.2 1.2 0 0 0 1.5 7.3 L6.6 12.4 A1.4 1.4 0 0 0 8.6 12.4 L12.4 8.6 A1.4 1.4 0 0 0 12.4 6.6 Z"
-              stroke="currentColor"
-              strokeWidth="1.3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <circle cx="4.4" cy="4.4" r="0.9" fill="currentColor"/>
-          </svg>
-          {children}
-        </span>
-      )
-    }
+  const markdownComponents = useMemo<Components>(() => ({
+    a: ({ node, href, children, ...props }) => {
+      if (!href) return <a {...props}>{children}</a>
 
-    if (href.startsWith('https://task.internal/')) {
-      return (
-        <div className="flex items-start gap-2 mt-4 mb-2">
-          <span className="inline-flex items-start gap-2 text-[#e0e0e0] font-medium cursor-default text-[13px]">
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-[#c45d2e] shrink-0 mt-1">
+      if (href.startsWith('https://label.internal/')) {
+        const colour = href.replace('https://label.internal/', '')
+        return (
+          <span
+            className="font-mono text-[11px] tracking-wide mx-1 inline-flex items-center gap-1.5 align-baseline"
+            style={{ color: colour }}
+          >
+            <svg width="11" height="11" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 translate-y-[1px]">
               <path
                 d="M7.3 1.5 A1.2 1.2 0 0 0 6.5 1.2 H2.3 A1.2 1.2 0 0 0 1.2 2.3 V6.5 A1.2 1.2 0 0 0 1.5 7.3 L6.6 12.4 A1.4 1.4 0 0 0 8.6 12.4 L12.4 8.6 A1.4 1.4 0 0 0 12.4 6.6 Z"
                 stroke="currentColor"
@@ -49,27 +42,47 @@ const markdownComponents: Components = {
               />
               <circle cx="4.4" cy="4.4" r="0.9" fill="currentColor"/>
             </svg>
-            <span className="flex-1 leading-snug">{children}</span>
+            {children}
           </span>
-        </div>
+        )
+      }
+
+      if (href.startsWith('https://task.internal/')) {
+        const taskId = href.replace('https://task.internal/', '')
+        const handleTaskClick = () => {
+          const task = allTasks.find(t => t.id === taskId)
+          if (task) setDetailTask(task)
+        }
+
+        return (
+          <div className="flex items-start gap-2 mt-4 mb-2">
+            <button
+              onClick={handleTaskClick}
+              className="inline-flex items-start gap-2 text-[#e0e0e0] font-medium cursor-pointer text-[13px] hover:text-[#c45d2e] transition-colors text-left"
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-[#c45d2e] shrink-0 mt-1">
+                <path
+                  d="M7.3 1.5 A1.2 1.2 0 0 0 6.5 1.2 H2.3 A1.2 1.2 0 0 0 1.2 2.3 V6.5 A1.2 1.2 0 0 0 1.5 7.3 L6.6 12.4 A1.4 1.4 0 0 0 8.6 12.4 L12.4 8.6 A1.4 1.4 0 0 0 12.4 6.6 Z"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle cx="4.4" cy="4.4" r="0.9" fill="currentColor"/>
+              </svg>
+              <span className="flex-1 leading-snug">{children}</span>
+            </button>
+          </div>
+        )
+      }
+
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+          {children}
+        </a>
       )
     }
-
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
-        {children}
-      </a>
-    )
-  }
-}
-
-export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefingPanelProps) {
-  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
-  const [todayMeetings, setTodayMeetings] = useState<Meeting[]>([])
-  const [viewDate, setViewDate] = useState<Date>(new Date())
-  const [briefing, setBriefing] = useState<string>('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [isFetchingMeetings, setIsFetchingMeetings] = useState(false)
+  }), [allTasks])
 
   // Reset state and fetch meetings when panel opens or date changes
   useEffect(() => {
@@ -267,6 +280,14 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
           )}
         </div>
       </div>
+
+      {/* Detail Modal Overlay */}
+      {detailTask && (
+        <TaskDetailModal
+          task={detailTask}
+          onClose={() => setDetailTask(null)}
+        />
+      )}
     </>
   )
 }
