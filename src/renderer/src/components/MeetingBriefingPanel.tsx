@@ -54,25 +54,28 @@ const markdownComponents: Components = {
 export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefingPanelProps) {
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
   const [todayMeetings, setTodayMeetings] = useState<Meeting[]>([])
+  const [viewDate, setViewDate] = useState<Date>(new Date())
   const [briefing, setBriefing] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [isFetchingMeetings, setIsFetchingMeetings] = useState(false)
 
-  // Reset state and fetch meetings when panel opens
+  // Reset state and fetch meetings when panel opens or date changes
   useEffect(() => {
     if (!isOpen) {
       setSelectedMeeting(null)
       setBriefing('')
+      setViewDate(new Date()) // Reset to today when closed
       return
     }
 
-    // Fetch meetings
+    // Fetch meetings for the selected date
     setIsFetchingMeetings(true)
-    window.api.meetings.getUpcoming().then(meetings => {
+    const dateString = viewDate.toISOString()
+    window.api.meetings.getUpcoming(dateString).then(meetings => {
       setIsFetchingMeetings(false)
       if (meetings) setTodayMeetings(meetings)
     }).catch(() => setIsFetchingMeetings(false))
-  }, [isOpen])
+  }, [isOpen, viewDate])
 
   // Generate briefing when a meeting is selected
   useEffect(() => {
@@ -99,6 +102,10 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
       }
     }
   }, [isOpen, selectedMeeting])
+
+  // Format header text
+  const isToday = new Date().toDateString() === viewDate.toDateString()
+  let headerText = isToday ? "TODAY'S MEETINGS" : viewDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase() + " MEETINGS"
 
   return (
     <>
@@ -136,7 +143,29 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
           {!selectedMeeting ? (
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-[#a0a0a0] font-mono text-[11px] uppercase tracking-wider">Today's Meetings</h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const d = new Date(viewDate)
+                      d.setDate(d.getDate() - 1)
+                      setViewDate(d)
+                    }}
+                    className="text-[#666] hover:text-[#f0f0f0] transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                  </button>
+                  <h3 className="text-[#a0a0a0] font-mono text-[11px] uppercase tracking-wider">{headerText}</h3>
+                  <button
+                    onClick={() => {
+                      const d = new Date(viewDate)
+                      d.setDate(d.getDate() + 1)
+                      setViewDate(d)
+                    }}
+                    className="text-[#666] hover:text-[#f0f0f0] transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </button>
+                </div>
               </div>
 
               {isFetchingMeetings ? (
@@ -146,7 +175,7 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
                 </div>
               ) : todayMeetings.length === 0 ? (
                 <div className="text-center py-8 text-[#666] font-mono text-[11px]">
-                  No meetings found on your local Calendar for today.
+                  No meetings found on your local Calendar for {isToday ? 'today' : 'this date'}.
                 </div>
               ) : null}
 

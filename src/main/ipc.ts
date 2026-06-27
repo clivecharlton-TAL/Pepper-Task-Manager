@@ -276,9 +276,9 @@ export function registerIpcHandlers(): void {
     })
   })
 
-  ipcMain.handle('meetings:upcoming', async () => {
+  ipcMain.handle('meetings:upcoming', async (_e, dateString?: string) => {
     try {
-      const meetings = await fetchUpcomingMeetings()
+      const meetings = await fetchUpcomingMeetings(dateString)
       return meetings
     } catch (error) {
       console.error('Error fetching meetings:', error)

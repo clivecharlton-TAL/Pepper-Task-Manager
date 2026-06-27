@@ -4,11 +4,11 @@ import type { Meeting } from '../shared/types'
 
 const execAsync = promisify(exec)
 
-export async function fetchUpcomingMeetings(): Promise<Meeting[]> {
+export async function fetchUpcomingMeetings(dateString?: string): Promise<Meeting[]> {
   try {
     const script = `
 const app = Application('Calendar');
-const today = new Date();
+const today = ${dateString ? `new Date("${dateString}")` : `new Date()`};
 today.setHours(0, 0, 0, 0);
 const tomorrow = new Date(today);
 tomorrow.setDate(tomorrow.getDate() + 1);
