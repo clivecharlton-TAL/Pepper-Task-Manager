@@ -4,14 +4,19 @@ import { fetchUpcomingMeetings } from './meetings';
 
 describe('fetchUpcomingMeetings', () => {
   test('returns meetings properly bounded to the local day', async () => {
-    // Generate valid random dates between 2020 and 2030
+    // Generate valid random dates between 2020 and 2030.
+    // The previous test failed because fast-check can sometimes generate NaN dates if the constraints are wrong,
+    // though here it might be an invalid timezone conversion. We use a stricter generator.
     await fc.assert(
       fc.asyncProperty(
-        fc.date({ min: new Date('2020-01-01'), max: new Date('2030-01-01') }),
-        async (testDate) => {
+        fc.integer({ min: new Date('2020-01-01').getTime(), max: new Date('2030-01-01').getTime() }),
+        async (testTimestamp) => {
+          const testDate = new Date(testTimestamp);
+          if (isNaN(testDate.getTime())) return; // Guard against NaN
+
           const dateString = testDate.toISOString();
           const meetings = await fetchUpcomingMeetings(dateString);
-          
+
           // Verify it doesn't crash and returns an array
           expect(Array.isArray(meetings)).toBe(true);
 
@@ -38,10 +43,10 @@ describe('fetchUpcomingMeetings', () => {
   // Explicit test for the user's specific failure date: June 29, 2026
   test('correctly fetches June 29, 2026 meetings', async () => {
     const meetings = await fetchUpcomingMeetings("2026-06-29T00:00:00.000Z");
-    
+
     // We expect actual meetings on this date based on previous manual sqlite checks
     expect(meetings.length).toBeGreaterThan(0);
-    
+
     console.log(`Found ${meetings.length} meetings for June 29, 2026:`);
     meetings.forEach(m => console.log(`- ${m.title} (${m.start_time})`));
   });
