@@ -1,0 +1,499 @@
+[
+  {
+    "title": "[Capitec] Capitec: Instalment credit solution (Dev)",
+    "priority": "high",
+    "status": "in_progress",
+    "notes": "**Owner:** Akshiara Maharaj Dominique Verhoog\n**Stage:** BRS in progress\nWireframes complete\nUI in progress\nBRS Walkthrough - 4 June\nUnable to provide estimations at this stage due to so many unknowns on Capitec side. Please allocate 1 dev on CHSBE for the quarter (dev is already in progress) and timebox for other dev teams\n**Teams:** SFWEB, DSCBE, CHSBE, SFAPP, PAY\n\n**Problem / Context:**\nCurrently customers that choose installment payment options in checkout experience high friction. We will be providing a seamless UX for instalment payment options by integrating with a 3rd party bank that pre-approves credit for eligible customers.\n\nOKR:\n- Complete backend dev & start front-end dev in 27Q2\n- Incremental uplift to conversion rate, orders, GMV & returning customers",
+    "due_date": "2026-06-30",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[TakealotMORE - P1] TakealotMORE: Discounted Subscription for Capitec customers",
+    "priority": "high",
+    "status": "in_progress",
+    "notes": "**Owner:** Kuda Kandemiiri\n**Stage:** UI - Pending \nBRS - WIP\n✅ BRS Walkthrough\nNo dev started in 27Q1\n**Teams:** SFAPP, CHSBE, SFWEB, PAY\n\n**Problem / Context:**\nEnables Capitec cardholders to claim discounted or free TakealotMORE subscriptions (up to 12 months free) via a unique discount code, driving customer acquisition for TakealotMORE while adding value to Capitec's rewards offering.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[EcoSystem Growth] Embedded Mr D on TAL",
+    "priority": "high",
+    "status": "in_progress",
+    "notes": "**Owner:** Carla Rabe\n**Stage:** Design & Discovery Q2\nWebview POC Q2\nDev Q3\n**Teams:** DSCBE , CHSBE , SFAPP , SFWEB , PAY\n\n**Problem / Context:**\nMr D restaurant ordering gets built directly into the Takealot app with one shared login and wallet (no forced sign-in upfront), removing the 81% drop-off customers hit when switching between apps. This opens 3.8M Takealot-only customers to Mr D and gets Takealot's low-engagement subscribers ordering more often",
+    "due_date": "2026-08-31",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Cross border commerce] Cross Border Commerce",
+    "priority": "high",
+    "status": "in_progress",
+    "notes": "**Owner:** Kimaal Baker\n**Stage:** Development Q2\n**Teams:** DML , DSCBE\n\n**Problem / Context:**\nAllowing customers to discover internationally shipped items and alleviating anxiety usually attributed to purchases from international sellers.",
+    "due_date": "2026-08-31",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Next Generation Search & Discovery] VAIS foundations: autosuggest, bot traffic & A/B tooling.",
+    "priority": "high",
+    "status": "in_progress",
+    "notes": "**Owner:** Kimaal Baker\n**Stage:** Development Q2\n**Teams:** DML , DSCBE\n\n**Problem / Context:**\nMechanisms in place to handle bot traffic & integration of our A/B testing tooling for merchandising controls.",
+    "due_date": "2026-08-31",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[TakealotMORE] MORE upsell on Order Confirmation and Web Header CTA",
+    "priority": "high",
+    "status": "backlog",
+    "notes": "**Owner:** Kuda Kandemiiri\n**Stage:** UX Complete\nUI - Pending\n**Teams:** CHSBE , SFAPP , SFWEB\n\n**Problem / Context:**\nFor Non-subscribers: Take advantage of the opportunity to upsell TakealotMORE sign up and Missed MORE savings at order confirmation. Also add upsell on Web header ribbon",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[TakealotMORE] TakealotMORE newsletter enrol members after subscribing New customers only",
+    "priority": "medium",
+    "status": "in_progress",
+    "notes": "**Owner:** Kuda Kandemiiri\n**Stage:** ✅ BRS Walkthrough\nNo dev started in 27Q1\n**Teams:** CHSBE , DSCBE\n\n**Problem / Context:**\nOur T&Cs allow us to speak to members about their benefits today, but in practice we only use Marketing opt-ins. This means only 30% of members get push, and only 60% receive emails. This project is for backend teams to opt in all members for TALMORE comms, and milstone 2 is to add a default opt in to sign up journey",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[TakealotMORE] Netwerk24 Benefit integration",
+    "priority": "medium",
+    "status": "todo",
+    "notes": "**Owner:** Kuda Kandemiiri\n**Stage:** UI - Complete \n✅ BRS Walkthrough\n**Teams:** CHSBE , SFAPP , SFWEB\n\n**Problem / Context:**\nOffer Premium subscrbers the option to redeem their Netwerk 24 (Afrikaans app for News24) benefit",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[OKR - Ad format updates on Order Pages] Video Ads on Order Pages",
+    "priority": "medium",
+    "status": "in_progress",
+    "notes": "**Owner:** Sakhe Sebola\n**Stage:** Development\n**Teams:** DSCBE , CHSBE , SFAPP , SFWEB\n\n**Problem / Context:**\nAdds video ads and bigger banners to Takealot's post-purchase Order pages, giving advertisers a richer format and growing ad revenue to ~R1.5M/year by FY29.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Speedy Delivery] Login Banner on Apps",
+    "priority": "medium",
+    "status": "todo",
+    "notes": "**Owner:** Lihle Jacobs\n**Stage:** UX Complete\nUI TBC\nBRS Complete\n**Teams:** SFAPP\n\n**Problem / Context:**\nThe purpose of this project is to show a CMS banner to users to log in earlier in the shopping funnel, enabling us to display personalised recommendations and accurate, location-aware delivery promises upfront.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Speedy Delivery/More] Delivery Threshold on Cart for Subscribers vs Non-susbcribers",
+    "priority": "medium",
+    "status": "todo",
+    "notes": "**Owner:** Lihle JacobsKathlene Rooplal\n**Stage:** UX Complete\nUI TBC\nBRS Complete\n**Teams:** DSCBE , CHSBE , SFAPP , SFWEB\n\n**Problem / Context:**\nUpdates Takealot's cart progress bar that nudges shoppers to spend more for free delivery, reflecting the new R750 non-subscriber threshold (up from R650) and adding tailored logic for MORE Standard (R500) and Premium (suppressed entirely) subscribers.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "Deprecation of Google Content API for Shopping",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Zsuzsanna Ágnes György\n**Stage:** Jira ticket\n**Teams:** DSCBE\n\n**Problem / Context:**\nGoogle has announced that the Content API for Shopping will be sunset on August 18, 2026. Migration to the new Merchant API is mandatory to avoid breaking our current integrations.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[SEO Growth] SEO M2",
+    "priority": "medium",
+    "status": "in_progress",
+    "notes": "**Owner:** Zsuzsanna Ágnes György\n**Stage:** Development\n**Teams:** DSCBE , SFWEB\n\n**Problem / Context:**\nComplete some of Incubeta's recommendations on Core Web Vitales and update schemas on PDP and CMS landing pages.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[TakealotMORE - P2] TakealotMORE Discounted Subscriptions Offer at Cancellation",
+    "priority": "high",
+    "status": "backlog",
+    "notes": "**Owner:** Kuda Kandemiiri\n**Stage:** UI - Pending \n✅ BRS - Complete\n✅ BRS Walkthrough\nMid June App Release\n**Teams:** CHSBE , SFAPP , SFWEB\n\n**Problem / Context:**\nThe feature aims to reduce churn by presenting eligible subscribers with offers that drive retention when they attempt to cancel their subscription and meet certain criteria:",
+    "due_date": "2026-06-30",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Speedy Delivery - SDD/NDD] Speedy: Collect upsell in Checkout AB Test",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Lihle Jacobs\n**Stage:** ✅ UI Complete on Apps (Web - WIP)\n✅ BRS Complete\n✅ BRS Walkthrough\nEnd June/ Early July App Release\n**Teams:** CHSBE , SFAPP , SFWEB\n\n**Problem / Context:**\nThe shipping options screen has the highest drop-off rate in the checkout flow as it is the first time we show the delivery date and fee. The project aims to highlight collection as a (1) cheaper option and (2) more convenient option, giving customers control over when they can pick up items (in absence of delivery slots).",
+    "due_date": "2026-06-30",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Speedy Delivery - SDD/NDD] Speedy: Use my Location on Pick up point page [Apps]",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Lihle Jacobs\n**Stage:** ✅ UI Complete on Apps\n✅ BRS Complete\n✅ BRS Walkthrough\nEnd July App Release\n**Teams:** SFAPP\n\n**Problem / Context:**\nThis project introduces dynamic geolocation retrieval capabilities to automatically surface, sort, and display the nearest Takealot Pickup Points (TPPs) relative to a user’s real-time coordinates.",
+    "due_date": "2026-07-31",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Grow Advertising] Retail Media- Implement OSMOS Events SDK for TAL",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Ejaaz Dalvie\n**Stage:** BRS Walkthrough\nNeeded on Web & Apps\nEnd June App Release\n**Teams:** SFAPP\n\n**Problem / Context:**\nMigrate events on App & Web to OnlineSales events SDK for more consistent, accurate reporting",
+    "due_date": "2026-06-30",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[TakealotMORE - P2] TakealotMORE Aware buybox",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Kuda Kandemiiri\n**Stage:** UI Complete \nBRS Complete\nBRS Walkthrough\nEnd July App Release\n**Teams:** DSCBE , CHSBE , SFAPP , SFWEB\n\n**Problem / Context:**\nImprove visibility of TalMORE pricing for subscribers. Today the MORE price (1) appears below the fold on Apps (2) is not reflected as the main price in the buybox for subscribers.",
+    "due_date": "2026-07-31",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Speedy Delivery - WEB] Speedy Delivery - Location (Web) M1+M2: Logged in + PROMPT TO LOGIN & EXTEND SPEEDY JOURNEYS",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Lihle Jacobs\n**Stage:** ✅ BRS Walkthrough\nEnd June Web Deploy\n**Teams:** SFWEB\n\n**Problem / Context:**\nThiis Milestone includes-(1) Extend Speedy journeys to  Web (2) Prompt to Login on homepage",
+    "due_date": "2026-06-30",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Gift registry] Gift registry",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Hari Subbiah\n**Stage:** ✅ BRS Walkthrough\nEnd Sept Web Deploy\n**Teams:** DSCBE , CHSBE , SFWEB , PAY\n\n**Problem / Context:**\nThis milestone includes (1) Receiver (host) create, edit registries (2) Add & manage registry items (3) share the registry (4) Giver (guest) purchases the registry items",
+    "due_date": "2026-09-30",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Expand Digital Wallets] Apple Pay on Web",
+    "priority": "medium",
+    "status": "backlog",
+    "notes": "**Owner:** Dominique Verhoog\n**Stage:** ❓ UI - Pending \n✅ BRS\n✅ BRS Walkthrough\n**Teams:** CHSBE , SFWEB , PAY\n\n**Problem / Context:**\nIntroducing a payment method on web that carries less friction than credit card.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Afilliate Marketing] Afilliate Marketing",
+    "priority": "medium",
+    "status": "in_progress",
+    "notes": "**Owner:** Zsuzsanna Ágnes György\n**Stage:** ✅ BRS Walkthrough\nDev continue\n**Teams:** CHSBE , SFAPP , SFWEB\n\n**Problem / Context:**\nAffiliate Programme is aimed at expanding market reach and driving incremental GMV growth. This initiative will harness the reach and influence of affiliates to cost-effectively extend our brand's presence into untapped markets.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Conversions - Payments] Integration with New Credit Card PSP - M1  (Dynamic URL's needs to be done before this is deployed)",
+    "priority": "medium",
+    "status": "todo",
+    "notes": "**Owner:** Lucas Herrick\n**Stage:** ✅ BRS Walkthrough\nIntegration Q1 and Q2\nEnd of Sept target date\n**Teams:** PAY\n\n**Problem / Context:**\nCredit card is our key payment method however the conversion rate has been declining YOY.Current card conversion rate is at 62.61%. This is largely due to the redirect to a Paygate hosted page along with 3DS authorisation failures. With a new PSP we could reach 74.84% as the payment success rate for all card payments incl.",
+    "due_date": "2026-09-30",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Expand Digital wallets - Highest priority] Samsung Pay",
+    "priority": "medium",
+    "status": "todo",
+    "notes": "**Owner:** Dominique Verhoog\n**Stage:** ✅ Product Discovery done\n✅ BRS Walkthrough\nDependency on Express checkout\nEnd July App Release\n**Teams:** SFAPP\n\n**Problem / Context:**\nIntroducing another wallet payment method on apps that carries less friction than credit card.",
+    "due_date": "2026-07-31",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] Tech | Moving orders out of take2 - Spec for pyramid order gateway + Dev",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Wilhelm Ellmann\n**Stage:** ✅ Tech initiative\n**Teams:** CHSBE\n\n**Problem / Context:**\nTake2 is a many years old legacy monolith database. Splitting up this monolithic database allows us to adopt a data architecture more suitable for stability and scale in the form of independent microservices with related fit-for-purpose databases.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] Migrate Old DBs to CloudSQL",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Ross Allardice  Riggs Swanepoel\n**Stage:** ✅ Tech initiative\n**Teams:** DSCBE , PAY\n\n**Problem / Context:**\nWith CloudSQL being the standard for database management at Takealot, most of our DBs reside there, but there are some old databases still residing on-premises that need to be migrated to CloudSQL.\nCloudSQL is a service within Google Cloud Platform (GCP) that allows for easier database management, as well as having some trip wires in place that automate rebooting of hosts when needed that will greatly reduce the impact of incidents like this recent sev 1: SR-5363. Each database is also on its own instance which reduces the blast radius should an incident occur.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Conversions - Payments] Dynamic URL's on App (needed for integration with new credit card psp & Capitec Pay)",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Lucas Herrick\n**Stage:** Unknown\n**Teams:** SFAPP\n\n**Problem / Context:**\nApps can dynamically add/change payment providers or methods. When we change providers/add payment methods we wouldnt need to do any work. We have also had atleast 2 incidents caused by vendors changing agreed urls (success url etc) that cause payments to break, and would usually need app deploys currently to fix",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] Android - Android 17 - Phase 1",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Jean-Louis Kroon\n**Stage:** ✅ Tech initiative\n**Teams:** SFAPP\n\n**Problem / Context:**\nTarget the latest OS - released in June 2026",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] Android - Android 17 - Phase 2",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Jean-Louis Kroon\n**Stage:** ✅ Tech initiative\n**Teams:** SFAPP\n\n**Problem / Context:**\nTarget the latest OS - released in July 2026",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] iOS - iOS 26 (Dependency for Liquid Glass)",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Jean-Louis Kroon\n**Stage:** Unknown\n**Teams:** SFAPP\n\n**Problem / Context:**\nTarget the latest OS - released in Sept 2025",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] iOS - Liquid Glass - Investigation + Dev (Dependency for iOS 27 - not doing this would block release of existing App). Deadline: end August",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Jean-Louis Kroon\n**Stage:** Need UI\n**Teams:** SFAPP\n\n**Problem / Context:**\nTarget the latest OS design system - not doing this would block release of existing App). Deadline: end August",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] iOS - iOS 27 - Phase 1",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Jean-Louis Kroon\n**Stage:** ✅ Tech initiative\n**Teams:** SFAPP\n\n**Problem / Context:**\nEvery major iOS release introduces breaking system changes that can cause app crashes and visual bugs for early adopters. Proactively testing our live app and targeting the iOS 27 SDK prevents day-one user disruption and avoids a rushed scramble to meet Apple’s future App Store compliance deadlines.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] iOS - Update Swift Version",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Jean-Louis Kroon\n**Stage:** ✅ Tech initiative\n**Teams:** SFAPP\n\n**Problem / Context:**\nStaying on an older version of Swift risks accumulating technical debt and leaves the app vulnerable to hidden bugs that cause random crashes. Upgrading to Swift 6 fixes these issues before they reach users, keeps our development tools up to date, and ensures the app remains stable and compatible with future Apple updates.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] iOS - Android - AI Adoption",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Jean-Louis Kroon\n**Stage:** ✅ Tech initiative\n**Teams:** SFAPP\n\n**Problem / Context:**\nWe’re looking into agentic coding to see how it can help us build faster. This Objective is focused on figuring out the architecture and running a first-round implementation in a safe, isolated area of our codebase to see how it performs before rolling it out further.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] React 19 Upgrade Prerequirements | Dependancies Investigation & Migrate Class components (react 19 blocker). We need to do this ASAP as React 18 is at end of life since 5 Dec 2024",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Nicole Bell\n**Stage:** ✅ Tech initiative\n**Teams:** SFWEB\n\n**Problem / Context:**\nActive support for React 17 ended 2.5 years ago. The lack of active support and performance improvements, leaves our site vulnerable and less efficient. \nThis can result in falling behind technologically, impacting our market competitiveness and relevance and ability to attract and retain key talented engineers.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] Tech | Web | UI Design System - Component Library - Removing Node Sass - Node upgrade dependancy",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Nicole Bell\n**Stage:** ✅ Tech initiative\n**Teams:** SFWEB\n\n**Problem / Context:**\nWith UI design moving to Figma, a new design system is created for all platforms. This has created inconsistencies between new designs and implementation on web. By implementing the design system on web we can reduce the friction/time spent for recreating new designs/layout for each project by utilising the new design system.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] Image Provider Resiliency",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Riggs Swanepoel\n**Stage:** ✅ Tech initiative\n**Teams:** DSCBE\n\n**Problem / Context:**\nMaking our Image providers more resilient with a look at whether we can remove Cloudflare reliance at all.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] Android - CI/CD - Optimisations",
+    "priority": "medium",
+    "status": "todo",
+    "notes": "**Owner:** Jean-Louis Kroon\n**Stage:** ✅ Tech initiative\n**Teams:** SFAPP\n\n**Problem / Context:**\nBuilding on our initial CI/CD setup, this Objective focuses on accelerating build times and feedback loops by implementing parallel unit test runs and hooking up our pipelines to automatically kick off LambdaTest automation.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] Android - Screen performance (Maps)",
+    "priority": "medium",
+    "status": "todo",
+    "notes": "**Owner:** Jean-Louis Kroon\n**Stage:** ✅ Tech initiative\n**Teams:** SFAPP\n\n**Problem / Context:**\nFirebase shows high frozen frames on our map screens, so we're doing a, preventive deep dive. This Objective is investigating out the rendering behavior to see what's causing the slow frame rates.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] Tech | Apps CI/CD POC",
+    "priority": "medium",
+    "status": "todo",
+    "notes": "**Owner:** Jean-Louis Kroon\n**Stage:** Dependent on Gitlab migration\n✅ Tech initiative\n**Teams:** SFAPP\n\n**Problem / Context:**\nNot having a complete CI/CD pipeline negatively impacts engineers productivity.\nReduces manual effort. Reduces production build inconsistency risk and improves code quality.\nIndustry best practise.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] Outbound Product Feeds Migration",
+    "priority": "medium",
+    "status": "todo",
+    "notes": "**Owner:** Riggs Swanepoel\n**Stage:** ✅ Tech initiative\n**Teams:** DSCBE\n\n**Problem / Context:**\nDependency for potentially adding books to OnlineSales feed. DSCBE is currently maintaining 3 disparate systems for outbound feeds, 2 of which are considered legacy. In addition to the ongoing technical overhead, these legacy systems incur ongoing maintainance costs as well due to addition DBs being needed for them",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Technical Initiative] Upgrade SQLAlchemy from 1.x -> 2.x",
+    "priority": "medium",
+    "status": "todo",
+    "notes": "**Owner:** Ross Allardice\n**Stage:** ✅ Tech initiative\n**Teams:** PAY\n\n**Problem / Context:**\nCurrently the SQLAlchemy library version we are using in our services is in maintenance phase and nearing end of life.\nConsequently, to put us in a better position from a security and bug vulnerability standpoint, we need to upgrade to the latest version.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "[Tech Initiative] Get off Take2: Orders & Order Items",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Mario De Freitas\n**Stage:** Unknown\n**Teams:** CHSBE\n\n**Problem / Context:**\nTech allocation of capacity to get off of Take2 with a focus on Orders & Order Items.",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  },
+  {
+    "title": "API Integration Tests",
+    "priority": "high",
+    "status": "todo",
+    "notes": "**Owner:** Mario De Freitas\n**Stage:** Unknown\n**Teams:** CHSBE, DSCBE\n\n**Problem / Context:**\n",
+    "labels": [
+      "10.Strategy-Roadmap/80.StoreFront/27Q2",
+      "20.Subsidiary-Directives/20.1.Takealot",
+      "+Roadmap"
+    ]
+  }
+]
