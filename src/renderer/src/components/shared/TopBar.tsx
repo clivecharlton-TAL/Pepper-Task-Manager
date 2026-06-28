@@ -230,8 +230,8 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
 
       <div className="flex-1" />
 
-      {/* List-only: sort + group + filter controls */}
-      {viewMode === 'list' && (
+      {/* List/Timeline: sort + group + filter controls */}
+      {(viewMode === 'list' || viewMode === 'timeline') && (
         <div className="flex items-center gap-2">
           <ListControl label="Sort" options={SORT_OPTIONS} value={listSort} onChange={setListSort} />
           <ListControl label="Group" options={GROUP_OPTIONS} value={listGroup} onChange={setListGroup} />
