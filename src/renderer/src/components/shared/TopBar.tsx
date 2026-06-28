@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import { useTaskStore, type ListSort, type ListGroup } from '../../stores/taskStore'
+import type { TaskStatus } from '../../../../shared/types'
 
 const SORT_OPTIONS: { value: ListSort; label: string }[] = [
   { value: 'due',      label: 'Due date'  },
@@ -14,6 +15,90 @@ const GROUP_OPTIONS: { value: ListGroup; label: string }[] = [
   { value: 'status',   label: 'Status'    },
   { value: 'label',    label: 'Label'     },
 ]
+
+const STATUS_FILTER_OPTIONS: { value: TaskStatus; label: string }[] = [
+  { value: 'backlog',     label: 'Backlog'     },
+  { value: 'todo',        label: 'To Do'       },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'done',        label: 'Done'        },
+]
+
+function MultiSelectControl<T extends string>({
+  label,
+  options,
+  hiddenValues,
+  onToggle,
+}: {
+  label: string
+  options: { value: T; label: string }[]
+  hiddenValues: T[]
+  onToggle: (v: T) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const visibleCount = options.length - hiddenValues.length
+
+  return (
+    <div ref={ref} className="relative" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <button
+        onMouseDown={e => e.stopPropagation()}
+        onClick={() => setOpen(o => !o)}
+        className="no-drag flex items-center gap-1.5 px-2 py-1 bg-[#2a2a2a] border border-[#333333] rounded font-mono text-[10px] hover:border-[#444444] transition-colors"
+      >
+        <span className="text-[#444444]">{label}</span>
+        <span className="text-[#888888]">
+          {visibleCount === options.length ? 'All' : `${visibleCount} selected`}
+        </span>
+        <svg
+          width="6" height="4" viewBox="0 0 6 4" fill="currentColor"
+          className={`text-[#555555] transition-transform flex-shrink-0 ${open ? 'rotate-180' : ''}`}
+        >
+          <path d="M0 0.5L3 3.5L6 0.5H0Z"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-1 bg-[#252525] border border-[#383838] rounded shadow-xl z-50 py-1"
+          style={{ minWidth: '130px' }}
+          onMouseDown={e => e.stopPropagation()}
+        >
+          {options.map(opt => {
+            const isVisible = !hiddenValues.includes(opt.value)
+            return (
+              <button
+                key={opt.value}
+                onClick={() => onToggle(opt.value)}
+                className="w-full text-left px-3 py-1.5 font-mono text-[10px] flex items-center gap-2 transition-colors text-[#888888] hover:text-[#c0c0c0] hover:bg-[#2a2a2a]"
+              >
+                <div className={`w-3 h-3 rounded-[3px] border flex items-center justify-center transition-colors ${
+                  isVisible ? 'bg-[#c45d2e] border-[#c45d2e] text-white' : 'border-[#444444] bg-transparent'
+                }`}>
+                  {isVisible && (
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  )}
+                </div>
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function ListControl<T extends string>({
   label,
@@ -95,6 +180,7 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
     viewMode, setViewMode,
     listSort, setListSort,
     listGroup, setListGroup,
+    hiddenStatuses, toggleHiddenStatus,
   } = useTaskStore()
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -144,11 +230,17 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
 
       <div className="flex-1" />
 
-      {/* List-only: sort + group controls */}
-      {viewMode === 'list' && (
+      {/* List/Timeline: sort + group controls */}
+      {(viewMode === 'list' || viewMode === 'timeline') && (
         <div className="flex items-center gap-2">
           <ListControl label="Sort" options={SORT_OPTIONS} value={listSort} onChange={setListSort} />
           <ListControl label="Group" options={GROUP_OPTIONS} value={listGroup} onChange={setListGroup} />
+          <MultiSelectControl
+            label="Filter Status"
+            options={STATUS_FILTER_OPTIONS}
+            hiddenValues={hiddenStatuses}
+            onToggle={toggleHiddenStatus}
+          />
         </div>
       )}
 
@@ -176,6 +268,17 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
             <rect x="0" y="0" width="13" height="2" rx="1"/>
             <rect x="0" y="5.5" width="13" height="2" rx="1"/>
             <rect x="0" y="11" width="13" height="2" rx="1"/>
+          </svg>
+        </button>
+        <button
+          onClick={() => setViewMode('timeline')}
+          title="Timeline view"
+          className={`p-1.5 rounded transition-colors ${viewMode === 'timeline' ? 'bg-[#383838] text-[#c45d2e]' : 'text-[#555555] hover:text-[#a0a0a0]'}`}
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
+            <rect x="0" y="2" width="6" height="2.5" rx="0.5"/>
+            <rect x="4" y="6" width="9" height="2.5" rx="0.5"/>
+            <rect x="2" y="10" width="5" height="2.5" rx="0.5"/>
           </svg>
         </button>
         <button

@@ -17,6 +17,7 @@ import ListView from './ListView/ListView'
 import ReportsView from './Reports/ReportsView'
 import FilesView from './Files/FilesView'
 import CalendarView from './Calendar/CalendarView'
+import TimelineView from './Timeline/TimelineView'
 import TopBar from './shared/TopBar'
 import MeetingBriefingPanel from './MeetingBriefingPanel'
 import AIChatPanel from './AIChatPanel'
@@ -146,6 +147,7 @@ export default function MainWindow() {
            viewMode === 'list'     ? <ListView />      :
            viewMode === 'reports'  ? <ReportsView />   :
            viewMode === 'files'    ? <FilesView />     :
+           viewMode === 'timeline' ? <TimelineView />  :
                                      <CalendarView />}
         </div>
       </div>

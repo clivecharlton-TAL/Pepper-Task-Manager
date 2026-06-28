@@ -15,10 +15,11 @@ interface TaskStore {
   activePriority: TaskPriority | null
   activeDue: DueFilter | null
   searchQuery: string
-  viewMode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar'
-  lastTaskViewMode: 'kanban' | 'list'
+  viewMode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar' | 'timeline'
+  lastTaskViewMode: 'kanban' | 'list' | 'timeline'
   listSort: ListSort
   listGroup: ListGroup
+  hiddenStatuses: TaskStatus[]
 
   init: () => () => void
   loadTasks: () => Promise<void>
@@ -33,10 +34,11 @@ interface TaskStore {
   setActivePriority: (priority: TaskPriority | null) => void
   setActiveDue: (due: DueFilter | null) => void
   setSearchQuery: (q: string) => void
-  setViewMode: (mode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar') => void
+  setViewMode: (mode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar' | 'timeline') => void
   navigateToLabel: (labelId: string) => void
   setListSort: (sort: ListSort) => void
   setListGroup: (group: ListGroup) => void
+  toggleHiddenStatus: (status: TaskStatus) => void
 }
 
 function applyEvent(state: Pick<TaskStore, 'tasks' | 'allTasks' | 'activeLabel'>, event: DomainEvent) {
@@ -90,6 +92,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   lastTaskViewMode: 'kanban',
   listSort: 'due',
   listGroup: 'none',
+  hiddenStatuses: ['done'],
 
   init: () => {
     const unsubTasks = window.api.on('domain-event', (raw: unknown) => {
@@ -153,7 +156,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   setSearchQuery: (q) => set({ searchQuery: q }),
   setViewMode: (mode) => set(s => ({
     viewMode: mode,
-    lastTaskViewMode: (mode === 'kanban' || mode === 'list') ? mode : s.lastTaskViewMode,
+    lastTaskViewMode: (mode === 'kanban' || mode === 'list' || mode === 'timeline') ? mode : s.lastTaskViewMode,
   })),
   navigateToLabel: (labelId) => {
     const { lastTaskViewMode } = get()
@@ -162,4 +165,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   },
   setListSort: (sort) => set({ listSort: sort }),
   setListGroup: (group) => set({ listGroup: group }),
+  toggleHiddenStatus: (status) => set(s => ({
+    hiddenStatuses: s.hiddenStatuses.includes(status)
+      ? s.hiddenStatuses.filter(x => x !== status)
+      : [...s.hiddenStatuses, status]
+  })),
 }))
