@@ -6,9 +6,18 @@ import TaskDetailModal from '../Kanban/TaskDetailModal'
 import ZeroStateView from '../shared/ZeroStateView'
 import { matchesDue, flattenLabels, matchesSearch, applySortFn, computeGroups, type Group } from '../../utils/listHelpers'
 
-function GroupHeader({ header, color }: { header: string; color?: string }) {
+function GroupHeader({ header, color, isCollapsed, onToggle }: { header: string; color?: string; isCollapsed: boolean; onToggle: () => void }) {
   return (
-    <div className="flex items-center gap-2.5 mt-5 mb-1 first:mt-2">
+    <div
+      className="flex items-center gap-2.5 mt-5 mb-1 first:mt-2 cursor-pointer hover:opacity-80 transition-opacity"
+      onClick={onToggle}
+    >
+      <svg
+        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        className={`text-[#555] transition-transform ${isCollapsed ? '-rotate-90' : ''}`}
+      >
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
       {color && <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />}
       <span className="font-mono text-[10px] tracking-widest uppercase text-[#555555]">{header}</span>
       <div className="flex-1 h-px bg-[#272727]" />
@@ -17,25 +26,35 @@ function GroupHeader({ header, color }: { header: string; color?: string }) {
 }
 
 export default function ListView() {
-  const { tasks, labels, searchQuery, activeStatus, activePriority, activeDue, listSort, listGroup } = useTaskStore()
+  const { tasks, labels, searchQuery, activeStatus, activePriority, activeDue, listSort, listGroup, hiddenStatuses } = useTaskStore()
   const [detailTask, setDetailTask] = useState<Task | null>(null)
   const [showDone, setShowDone] = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+
+  const toggleGroup = (groupId: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(groupId)) next.delete(groupId)
+      else next.add(groupId)
+      return next
+    })
+  }
 
   const flatLabels = useMemo(() => flattenLabels(labels), [labels])
   const cmp = useMemo(() => applySortFn(listSort), [listSort])
 
   const filtered = useMemo(() => tasks.filter(t => {
+    if (hiddenStatuses.includes(t.status)) return false
     if (activePriority && t.priority !== activePriority) return false
     if (activeDue      && !matchesDue(t, activeDue))     return false
     if (searchQuery    && !matchesSearch(t, searchQuery, flatLabels)) return false
     return true
-  }), [tasks, activePriority, activeDue, searchQuery, flatLabels])
+  }), [tasks, activePriority, activeDue, searchQuery, flatLabels, hiddenStatuses])
 
   // --- grouped mode ---
   const groups = useMemo<Group[] | null>(() => {
     if (listGroup === 'none') return null
-    const scopedTasks = (activeStatus ? filtered.filter(t => t.status === activeStatus) : filtered)
-      .filter(t => t.status !== 'done')
+    const scopedTasks = activeStatus ? filtered.filter(t => t.status === activeStatus) : filtered
     const computed = computeGroups(scopedTasks, listGroup, flatLabels)
     return computed.map(g => ({ ...g, tasks: [...g.tasks].sort(cmp) }))
   }, [listGroup, filtered, activeStatus, flatLabels, cmp])
@@ -78,20 +97,23 @@ export default function ListView() {
         {/* Grouped rendering */}
         {groups !== null ? (
           groups.length === 0 ? null : (
-            groups.map(g => (
-              <div key={g.id}>
-                <GroupHeader header={g.header} color={g.color} />
-                {g.tasks.map((task, i) => (
-                  <ListRow
-                    key={task.id}
-                    task={task}
-                    flatLabels={flatLabels}
-                    onOpen={setDetailTask}
-                    isLast={i === g.tasks.length - 1}
-                  />
-                ))}
-              </div>
-            ))
+            groups.map(g => {
+              const isCollapsed = collapsedGroups.has(g.id)
+              return (
+                <div key={g.id}>
+                  <GroupHeader header={g.header} color={g.color} isCollapsed={isCollapsed} onToggle={() => toggleGroup(g.id)} />
+                  {!isCollapsed && g.tasks.map((task, i) => (
+                    <ListRow
+                      key={task.id}
+                      task={task}
+                      flatLabels={flatLabels}
+                      onOpen={setDetailTask}
+                      isLast={i === g.tasks.length - 1}
+                    />
+                  ))}
+                </div>
+              )
+            })
           )
         ) : (
           /* Flat rendering */
