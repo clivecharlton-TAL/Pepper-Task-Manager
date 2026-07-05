@@ -31,6 +31,11 @@ export function matchesSearch(task: Task, q: string, flat: LabelNode[]): boolean
   return false
 }
 
+export function matchesHiddenTags(task: Task, hiddenTags: string[]): boolean {
+  if (hiddenTags.length === 0) return false
+  return task.labels.some(id => hiddenTags.includes(id))
+}
+
 export function sortByDue(a: Task, b: Task): number {
   if (!a.due_date && !b.due_date) return 0
   if (!a.due_date) return 1

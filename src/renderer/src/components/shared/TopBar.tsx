@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useMemo } from 'react'
 import { useTaskStore, type ListSort, type ListGroup } from '../../stores/taskStore'
 import type { TaskStatus } from '../../../../shared/types'
 
@@ -181,8 +181,15 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
     listSort, setListSort,
     listGroup, setListGroup,
     hiddenStatuses, toggleHiddenStatus,
+    hiddenTags, toggleHiddenTag,
+    labels,
   } = useTaskStore()
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const tagOptions = useMemo(
+    () => labels.filter(l => l.id.startsWith('+')).map(l => ({ value: l.id, label: l.name })),
+    [labels]
+  )
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -356,6 +363,16 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
       >
         Briefing
       </button>
+
+      {/* Tag filter (all task views) */}
+      {tagOptions.length > 0 && (
+        <MultiSelectControl
+          label="Tags"
+          options={tagOptions}
+          hiddenValues={hiddenTags}
+          onToggle={toggleHiddenTag}
+        />
+      )}
 
       {/* Search */}
       <div

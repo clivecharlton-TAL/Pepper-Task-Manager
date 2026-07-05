@@ -4,7 +4,7 @@ import type { Task } from '../../../../shared/types'
 import ListRow from './ListRow'
 import TaskDetailModal from '../Kanban/TaskDetailModal'
 import ZeroStateView from '../shared/ZeroStateView'
-import { matchesDue, flattenLabels, matchesSearch, applySortFn, computeGroups, type Group } from '../../utils/listHelpers'
+import { matchesDue, flattenLabels, matchesSearch, matchesHiddenTags, applySortFn, computeGroups, type Group } from '../../utils/listHelpers'
 
 function GroupHeader({ header, color, isCollapsed, onToggle }: { header: string; color?: string; isCollapsed: boolean; onToggle: () => void }) {
   return (
@@ -26,7 +26,7 @@ function GroupHeader({ header, color, isCollapsed, onToggle }: { header: string;
 }
 
 export default function ListView() {
-  const { tasks, labels, searchQuery, activeStatus, activePriority, activeDue, listSort, listGroup, hiddenStatuses } = useTaskStore()
+  const { tasks, labels, searchQuery, activeStatus, activePriority, activeDue, listSort, listGroup, hiddenStatuses, hiddenTags } = useTaskStore()
   const [detailTask, setDetailTask] = useState<Task | null>(null)
   const [showDone, setShowDone] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
@@ -45,11 +45,12 @@ export default function ListView() {
 
   const filtered = useMemo(() => tasks.filter(t => {
     if (hiddenStatuses.includes(t.status)) return false
+    if (matchesHiddenTags(t, hiddenTags)) return false
     if (activePriority && t.priority !== activePriority) return false
     if (activeDue      && !matchesDue(t, activeDue))     return false
     if (searchQuery    && !matchesSearch(t, searchQuery, flatLabels)) return false
     return true
-  }), [tasks, activePriority, activeDue, searchQuery, flatLabels, hiddenStatuses])
+  }), [tasks, activePriority, activeDue, searchQuery, flatLabels, hiddenStatuses, hiddenTags])
 
   // --- grouped mode ---
   const groups = useMemo<Group[] | null>(() => {

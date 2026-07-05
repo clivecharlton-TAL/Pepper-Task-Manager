@@ -10,14 +10,14 @@ import {
   isWeekend
 } from 'date-fns'
 import type { Task } from '../../../../shared/types'
-import { flattenLabels, computeGroups, applySortFn, matchesSearch, matchesDue, type Group } from '../../utils/listHelpers'
+import { flattenLabels, computeGroups, applySortFn, matchesSearch, matchesDue, matchesHiddenTags, type Group } from '../../utils/listHelpers'
 
 type TimelineRow =
   | { type: 'task'; task: Task }
   | { type: 'group-header'; group: Group; isCollapsed: boolean }
 
 export default function TimelineView() {
-  const { tasks, labels, searchQuery, listGroup, listSort, activeStatus, activePriority, activeDue, hiddenStatuses } = useTaskStore()
+  const { tasks, labels, searchQuery, listGroup, listSort, activeStatus, activePriority, activeDue, hiddenStatuses, hiddenTags } = useTaskStore()
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const flatLabels = useMemo(() => flattenLabels(labels), [labels])
   const cmp = useMemo(() => applySortFn(listSort), [listSort])
@@ -26,13 +26,14 @@ export default function TimelineView() {
     return tasks.filter(t => {
       if (!t.due_date) return false
       if (hiddenStatuses.includes(t.status)) return false
+      if (matchesHiddenTags(t, hiddenTags)) return false
       if (activeStatus && t.status !== activeStatus) return false
       if (activePriority && t.priority !== activePriority) return false
       if (activeDue && !matchesDue(t, activeDue)) return false
       if (searchQuery && !matchesSearch(t, searchQuery, flatLabels)) return false
       return true
     })
-  }, [tasks, activeStatus, activePriority, activeDue, searchQuery, flatLabels, hiddenStatuses])
+  }, [tasks, activeStatus, activePriority, activeDue, searchQuery, flatLabels, hiddenStatuses, hiddenTags])
 
   const { timelineTasks, groups } = useMemo(() => {
     const sorted = [...filteredTasks].sort((a, b) => {

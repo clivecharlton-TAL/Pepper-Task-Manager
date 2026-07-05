@@ -20,6 +20,7 @@ interface TaskStore {
   listSort: ListSort
   listGroup: ListGroup
   hiddenStatuses: TaskStatus[]
+  hiddenTags: string[]
 
   init: () => () => void
   loadTasks: () => Promise<void>
@@ -39,6 +40,7 @@ interface TaskStore {
   setListSort: (sort: ListSort) => void
   setListGroup: (group: ListGroup) => void
   toggleHiddenStatus: (status: TaskStatus) => void
+  toggleHiddenTag: (tagId: string) => void
 }
 
 function applyEvent(state: Pick<TaskStore, 'tasks' | 'allTasks' | 'activeLabel'>, event: DomainEvent) {
@@ -93,6 +95,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   listSort: 'due',
   listGroup: 'none',
   hiddenStatuses: ['done'],
+  hiddenTags: [],
 
   init: () => {
     const unsubTasks = window.api.on('domain-event', (raw: unknown) => {
@@ -169,5 +172,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     hiddenStatuses: s.hiddenStatuses.includes(status)
       ? s.hiddenStatuses.filter(x => x !== status)
       : [...s.hiddenStatuses, status]
+  })),
+  toggleHiddenTag: (tagId) => set(s => ({
+    hiddenTags: s.hiddenTags.includes(tagId)
+      ? s.hiddenTags.filter(x => x !== tagId)
+      : [...s.hiddenTags, tagId]
   })),
 }))

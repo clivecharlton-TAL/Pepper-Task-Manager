@@ -7,6 +7,7 @@ import {
 import type { Task, TaskPriority, LabelNode } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
 import TaskDetailModal from '../Kanban/TaskDetailModal'
+import { matchesHiddenTags } from '../../utils/listHelpers'
 
 type SubView = 'month' | 'week' | 'agenda'
 
@@ -401,7 +402,7 @@ function CalendarHeader({ subView, onSubView, currentDate, onNavigate }: {
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export default function CalendarView() {
-  const { tasks, labels, activePriority, activeStatus, searchQuery } = useTaskStore()
+  const { tasks, labels, activePriority, activeStatus, searchQuery, hiddenTags } = useTaskStore()
   const [subView, setSubView] = useState<SubView>('month')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [detailTask, setDetailTask] = useState<Task | null>(null)
@@ -411,6 +412,7 @@ export default function CalendarView() {
   const filtered = useMemo(() => tasks.filter(t => {
     if (activePriority && t.priority !== activePriority) return false
     if (activeStatus  && t.status   !== activeStatus)   return false
+    if (matchesHiddenTags(t, hiddenTags)) return false
     if (searchQuery) {
       const s = searchQuery.toLowerCase()
       if (!t.title.toLowerCase().includes(s) &&
@@ -421,7 +423,7 @@ export default function CalendarView() {
       }
     }
     return true
-  }), [tasks, activePriority, activeStatus, searchQuery, flatLabels])
+  }), [tasks, activePriority, activeStatus, searchQuery, flatLabels, hiddenTags])
 
   const scheduledTasks   = useMemo(() => filtered.filter(t => t.due_date), [filtered])
   const unscheduledTasks = useMemo(() => filtered.filter(t => !t.due_date && t.status !== 'done'), [filtered])
