@@ -8,21 +8,27 @@ import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilt
 const DB_PATH = join(app.getPath('userData'), 'tasks.db')
 
 let db: Database | null = null
+let dbInitPromise: Promise<Database> | null = null
 
 async function getDb(): Promise<Database> {
   if (db) return db
+  if (dbInitPromise) return dbInitPromise
 
-  const SQL = await initSqlJs()
+  dbInitPromise = (async () => {
+    const SQL = await initSqlJs()
 
-  if (existsSync(DB_PATH)) {
-    const fileBuffer = readFileSync(DB_PATH)
-    db = new SQL.Database(fileBuffer)
-  } else {
-    db = new SQL.Database()
-  }
+    if (existsSync(DB_PATH)) {
+      const fileBuffer = readFileSync(DB_PATH)
+      db = new SQL.Database(fileBuffer)
+    } else {
+      db = new SQL.Database()
+    }
 
-  migrate(db)
-  return db
+    migrate(db)
+    return db
+  })()
+
+  return dbInitPromise
 }
 
 function save(): void {
