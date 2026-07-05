@@ -250,9 +250,13 @@ function createTray(): Tray {
   const t = new Tray(icon)
   t.setToolTip('Pepper Tasks')
 
+  // Deliberately never call setContextMenu: once a context menu is attached,
+  // macOS shows it natively on click before our async handler below can
+  // rebuild it, making the visible menu permanently one click stale. Calling
+  // popUpContextMenu directly (with no menu attached) keeps every click a
+  // real JS event we control, so the menu is rebuilt fresh every time.
   const refreshAndShow = async () => {
     const menu = await buildTrayMenu()
-    t.setContextMenu(menu)
     t.popUpContextMenu(menu)
   }
 
