@@ -22,7 +22,8 @@ import TopBar from './shared/TopBar'
 import MeetingBriefingPanel from './MeetingBriefingPanel'
 import AIChatPanel from './AIChatPanel'
 import TaskCard from './Kanban/TaskCard'
-import { useTaskStore } from '../stores/taskStore'
+import TaskDetailModal from './Kanban/TaskDetailModal'
+import { useTaskStore, type DueFilter } from '../stores/taskStore'
 import { useSubTaskCountStore } from '../stores/subTaskCountStore'
 import { KANBAN_COLUMNS, type Task, type TaskStatus } from '../../../shared/types'
 
@@ -40,17 +41,44 @@ const appCollision: CollisionDetection = (args) => {
 }
 
 export default function MainWindow() {
-  const { viewMode, allTasks, updateTask, deleteTask } = useTaskStore()
+  const { viewMode, allTasks, updateTask, deleteTask, setActiveDue, setViewMode } = useTaskStore()
   const { counts: subTaskCounts, setCount: setSubTaskCount } = useSubTaskCountStore()
   const [sidebarWidth, setSidebarWidth] = useState(280)
   const [isAIChatOpen, setIsAIChatOpen] = useState(false)
   const [isBriefingOpen, setIsBriefingOpen] = useState(false)
   const [draggingTask, setDraggingTask] = useState<Task | null>(null)
+  const [externalTask, setExternalTask] = useState<Task | null>(null)
   const dragging = useRef(false)
   const startX = useRef(0)
   const startWidth = useRef(0)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+
+  const pullPendingOpenTask = useCallback(async () => {
+    const id = await window.api.window.getPendingOpenTaskId()
+    if (!id) return
+    const local = useTaskStore.getState().allTasks.find(t => t.id === id)
+    if (local) {
+      setExternalTask(local)
+      return
+    }
+    const fetched = await window.api.tasks.get(id)
+    if (fetched) setExternalTask(fetched)
+  }, [])
+
+  useEffect(() => {
+    pullPendingOpenTask()
+    const unsub = window.api.on('open-task:signal', pullPendingOpenTask)
+    return () => { unsub() }
+  }, [pullPendingOpenTask])
+
+  useEffect(() => {
+    const unsub = window.api.on('nav:due-filter', (filter: unknown) => {
+      setActiveDue(filter as DueFilter)
+      setViewMode('list')
+    })
+    return () => { unsub() }
+  }, [setActiveDue, setViewMode])
 
   useEffect(() => {
     const handleOpenBriefing = () => setIsBriefingOpen(true)
@@ -154,6 +182,9 @@ export default function MainWindow() {
 
       <AIChatPanel isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
       <MeetingBriefingPanel isOpen={isBriefingOpen} onClose={() => setIsBriefingOpen(false)} />
+      {externalTask && (
+        <TaskDetailModal task={externalTask} onClose={() => setExternalTask(null)} />
+      )}
 
       <DragOverlay>
         {draggingTask && <TaskCard task={draggingTask} isDragging />}

@@ -1,18 +1,9 @@
 import type { Task, LabelNode, TaskStatus, TaskPriority } from '../../../shared/types'
 import { type ListSort, type ListGroup, type DueFilter } from '../stores/taskStore'
+import { PRIORITY_RANK } from '../../../shared/taskPriority'
 
-export function matchesDue(task: Task, filter: DueFilter): boolean {
-  if (!task.due_date || task.status === 'done') return false
-  const due   = task.due_date.slice(0, 10)
-  const today = new Date().toISOString().slice(0, 10)
-  const d     = new Date()
-  d.setDate(d.getDate() + (7 - d.getDay()) % 7)
-  const eow   = d.toISOString().slice(0, 10)
-  if (filter === 'overdue')   return due < today
-  if (filter === 'today')     return due === today
-  if (filter === 'this_week') return due >= today && due <= eow
-  return false
-}
+export { matchesDue } from '../../../shared/dateFilters'
+export { PRIORITY_RANK }
 
 export function flattenLabels(nodes: LabelNode[]): LabelNode[] {
   const out: LabelNode[] = []
@@ -42,8 +33,6 @@ export function sortByDue(a: Task, b: Task): number {
   if (!b.due_date) return -1
   return a.due_date < b.due_date ? -1 : a.due_date > b.due_date ? 1 : 0
 }
-
-export const PRIORITY_RANK: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 }
 
 export function applySortFn(sort: ListSort): (a: Task, b: Task) => number {
   switch (sort) {

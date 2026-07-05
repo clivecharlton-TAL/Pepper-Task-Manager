@@ -2,7 +2,8 @@ import { useRef, useState, type ReactNode } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { useTaskStore, type DueFilter } from '../../stores/taskStore'
 import LabelTree from './LabelTree'
-import type { Task, TaskStatus, TaskPriority, LabelNode } from '../../../../shared/types'
+import type { TaskStatus, TaskPriority, LabelNode } from '../../../../shared/types'
+import { matchesDue } from '../../../../shared/dateFilters'
 
 function IconBacklog() {
   return (
@@ -115,29 +116,6 @@ const DUE_META: { id: DueFilter; label: string; colour: string; icon: ReactNode 
   { id: 'today',     label: 'Today',     colour: '#FF9F0A', icon: <IconCalendarDay /> },
   { id: 'this_week', label: 'This Week', colour: '#30D158', icon: <IconCalendarWeek /> },
 ]
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function endOfWeekStr() {
-  const d = new Date()
-  // Advance to Sunday (day 0 wraps to 7)
-  const daysUntilSunday = (7 - d.getDay()) % 7
-  d.setDate(d.getDate() + daysUntilSunday)
-  return d.toISOString().slice(0, 10)
-}
-
-function matchesDue(task: Task, filter: DueFilter): boolean {
-  if (!task.due_date || task.status === 'done') return false
-  const due  = task.due_date.slice(0, 10)
-  const today = todayStr()
-  const eow   = endOfWeekStr()
-  if (filter === 'overdue')   return due < today
-  if (filter === 'today')     return due === today
-  if (filter === 'this_week') return due >= today && due <= eow
-  return false
-}
 
 function DroppableTag({ label, count, isActive, onActivate }: {
   label: LabelNode; count: number; isActive: boolean; onActivate: () => void

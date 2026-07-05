@@ -1,11 +1,13 @@
-import { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, shell, ipcMain, clipboard } from 'electron'
+import { app, BrowserWindow, Tray, Menu, type MenuItemConstructorOptions, globalShortcut, nativeImage, shell, ipcMain, clipboard } from 'electron'
 import { createServer } from 'http'
 import { join } from 'path'
 import { homedir } from 'os'
-import { syncLabelsFromDrive, createTask } from './db'
+import { syncLabelsFromDrive, createTask, getTasks } from './db'
 import { broadcast } from './events'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
+import { matchesDue } from '../shared/dateFilters'
+import { PRIORITY_RANK, PRIORITY_GLYPH } from '../shared/taskPriority'
 
 const LOCAL_API_PORT = 47832
 
@@ -141,6 +143,20 @@ interface TextContext  { title: string; notes?: string }
 // Pending context: renderer pulls this on focus via quick-add:context IPC
 let pendingCtx: EmailContext | TextContext | null = null
 
+// Pending task id: renderer pulls this on mount/signal via open-task:pending IPC
+let pendingOpenTaskId: string | null = null
+
+function openTaskInMainWindow(taskId: string): void {
+  pendingOpenTaskId = taskId
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    mainWindow = createMainWindow()
+  } else {
+    mainWindow.show()
+    mainWindow.focus()
+    mainWindow.webContents.send('open-task:signal')
+  }
+}
+
 function toggleQuickAdd(ctx?: EmailContext | TextContext): void {
   if (!quickAddWindow) return
 
@@ -166,14 +182,54 @@ function toggleQuickAdd(ctx?: EmailContext | TextContext): void {
   quickAddWindow.focus()
 }
 
-function createTray(): Tray {
-  const icon = nativeImage.createFromDataURL(TRAY_ICON_BASE64)
-  icon.setTemplateImage(true)
-  const t = new Tray(icon)
+function truncate(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max - 1) + '…' : s
+}
 
-  const menu = Menu.buildFromTemplate([
+const DUE_TODAY_CAP = 8
+
+async function buildDueTodayMenuItems(): Promise<MenuItemConstructorOptions[]> {
+  const allTasks = await getTasks({})
+  const dueToday = allTasks
+    .filter(t => matchesDue(t, 'today'))
+    .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
+
+  if (dueToday.length === 0) {
+    return [{ label: 'No tasks due today', enabled: false }]
+  }
+
+  const shown = dueToday.slice(0, DUE_TODAY_CAP)
+  const items: MenuItemConstructorOptions[] = shown.map(task => ({
+    label: `${PRIORITY_GLYPH[task.priority]} ${truncate(task.title, 60)}`,
+    click: () => openTaskInMainWindow(task.id)
+  }))
+
+  if (dueToday.length > DUE_TODAY_CAP) {
+    items.push({
+      label: `+${dueToday.length - DUE_TODAY_CAP} more…`,
+      click: () => {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+          mainWindow = createMainWindow()
+        }
+        mainWindow.show()
+        mainWindow.focus()
+        mainWindow.webContents.send('nav:due-filter', 'today')
+      }
+    })
+  }
+
+  return items
+}
+
+async function buildTrayMenu(): Promise<Menu> {
+  const dueTodayItems = await buildDueTodayMenuItems()
+
+  return Menu.buildFromTemplate([
     { label: 'Open Pepper Tasks', click: () => { mainWindow?.show(); mainWindow?.focus() } },
     { label: 'Quick Add  ⌘⇧Space', click: () => toggleQuickAdd() },
+    { type: 'separator' },
+    { label: 'Due Today', enabled: false },
+    ...dueTodayItems,
     { type: 'separator' },
     {
       label: 'Sync Labels from Drive',
@@ -186,10 +242,22 @@ function createTray(): Tray {
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() }
   ])
+}
 
+function createTray(): Tray {
+  const icon = nativeImage.createFromDataURL(TRAY_ICON_BASE64)
+  icon.setTemplateImage(true)
+  const t = new Tray(icon)
   t.setToolTip('Pepper Tasks')
-  t.setContextMenu(menu)
-  t.on('click', () => { mainWindow?.show(); mainWindow?.focus() })
+
+  const refreshAndShow = async () => {
+    const menu = await buildTrayMenu()
+    t.setContextMenu(menu)
+    t.popUpContextMenu(menu)
+  }
+
+  t.on('click', refreshAndShow)
+  t.on('right-click', refreshAndShow)
 
   return t
 }
@@ -248,5 +316,10 @@ ipcMain.handle('quick-add:context', () => {
   const ctx = pendingCtx
   pendingCtx = null
   return ctx
+})
+ipcMain.handle('open-task:pending', () => {
+  const id = pendingOpenTaskId
+  pendingOpenTaskId = null
+  return id
 })
 

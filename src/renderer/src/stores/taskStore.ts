@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import type { Task, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, TaskStatus, TaskPriority, DomainEvent } from '../../../shared/types'
+import type { DueFilter } from '../../../shared/dateFilters'
 
-export type DueFilter = 'overdue' | 'today' | 'this_week'
+export type { DueFilter }
 export type ListSort  = 'due' | 'priority' | 'created' | 'title'
 export type ListGroup = 'none' | 'priority' | 'status' | 'label'
 
