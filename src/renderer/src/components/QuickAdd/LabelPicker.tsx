@@ -119,13 +119,11 @@ export default function LabelPicker({ labels, selected, onChange }: Props) {
 
   const openPicker = () => {
     setOpen(true)
-    window.api.window.expandQuickAdd()
   }
 
   const closePicker = () => {
     setOpen(false)
     setQuery('')
-    window.api.window.collapseQuickAdd()
   }
 
   const toggle = (id: string) => {

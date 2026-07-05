@@ -42,7 +42,6 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
   const [notesMode, setNotesMode] = useState<'edit' | 'preview'>(subTask.notes ? 'preview' : 'edit')
   const [assigned, setAssigned] = useState(subTask.assigned)
   const [dueDate,  setDueDate]  = useState(subTask.due_date ?? '')
-  const [showPicker,    setShowPicker]    = useState(false)
   const [attachments,   setAttachments]   = useState<TaskAttachmentWithStatus[]>([])
   const [attachDragging, setAttachDragging] = useState(false)
   const [attachError,   setAttachError]   = useState('')
@@ -86,15 +85,6 @@ export default function SubTaskDetailModal({ subTask, onClose, onChange }: Props
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
-
-  useEffect(() => {
-    if (!showPicker) return
-    const handler = (e: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setShowPicker(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [showPicker])
 
   useEffect(() => {
     if (!showQuarters) return

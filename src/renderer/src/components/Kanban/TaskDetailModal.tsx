@@ -371,7 +371,6 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const handleSubTaskAssign = async (id: string, assigned: string | null) => {
     const result = await window.api.subtasks.update(id, { assigned })
     if (result) setSubTasks(prev => prev.map(s => s.id === id ? result : s))
-    setAssignPickerId(null)
   }
 
   const handleSubTaskDate = async (id: string, due_date: string | null) => {
