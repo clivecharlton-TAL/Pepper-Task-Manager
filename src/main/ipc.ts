@@ -4,6 +4,12 @@ import { homedir } from 'os'
 import { readFileSync, statSync, existsSync, readdirSync } from 'fs'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import { createRequire } from 'module'
+import { extractRawText } from 'mammoth'
+
+const require = createRequire(import.meta.url)
+const PptxParser = require('node-pptx-parser').default
+const ExcelJS = require('exceljs')
 
 const execAsync = promisify(exec)
 import Anthropic from '@anthropic-ai/sdk'
@@ -66,6 +72,9 @@ export function registerIpcHandlers(): void {
     const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp'])
     const PDF_EXTS = new Set(['.pdf'])
     const GOOGLE_EXTS = new Set(['.gdoc', '.gsheet', '.gslides'])
+    const PPTX_EXTS = new Set(['.pptx'])
+    const DOCX_EXTS = new Set(['.docx'])
+    const XLSX_EXTS = new Set(['.xlsx'])
     const MAX_BYTES = 30_000
 
     const read: { name: string; sizeKb: number }[] = []
@@ -130,6 +139,34 @@ export function registerIpcHandlers(): void {
             },
             // Claude uses 'document' blocks for PDF parsing (supported in claude-3-5-sonnet-20241022)
           } as any)
+          read.push({ name, sizeKb })
+        } else if (PPTX_EXTS.has(ext)) {
+          const parser = new PptxParser(p)
+          const slides: { id: number; text: string[] }[] = await parser.extractText()
+          const text = slides.map(s => s.text.join('\n')).join('\n\n')
+          const content = text.length > MAX_BYTES ? text.slice(0, MAX_BYTES) + '\n…[truncated]' : text
+          contentBlocksForAI.push({ type: 'text', text: `### ${name}\n${content}` })
+          read.push({ name, sizeKb })
+        } else if (DOCX_EXTS.has(ext)) {
+          const { value: text } = await extractRawText({ path: p })
+          const content = text.length > MAX_BYTES ? text.slice(0, MAX_BYTES) + '\n…[truncated]' : text
+          contentBlocksForAI.push({ type: 'text', text: `### ${name}\n${content}` })
+          read.push({ name, sizeKb })
+        } else if (XLSX_EXTS.has(ext)) {
+          const workbook = new ExcelJS.Workbook()
+          await workbook.xlsx.readFile(p)
+          const sheetTexts: string[] = []
+          workbook.eachSheet((sheet: { name: string; eachRow: (cb: (row: { values: unknown }) => void) => void }) => {
+            const rows: string[] = []
+            sheet.eachRow(row => {
+              const cells = Array.isArray(row.values) ? row.values.slice(1) : []
+              rows.push(cells.map((c: unknown) => (c ?? '')).join('\t'))
+            })
+            sheetTexts.push(`#### ${sheet.name}\n${rows.join('\n')}`)
+          })
+          const text = sheetTexts.join('\n\n')
+          const content = text.length > MAX_BYTES ? text.slice(0, MAX_BYTES) + '\n…[truncated]' : text
+          contentBlocksForAI.push({ type: 'text', text: `### ${name}\n${content}` })
           read.push({ name, sizeKb })
         } else {
           skipped.push({ name, reason: 'format not supported' })
