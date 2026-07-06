@@ -19,6 +19,8 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
   const [briefing, setBriefing] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [isFetchingMeetings, setIsFetchingMeetings] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [refetchNonce, setRefetchNonce] = useState(0)
   const [detailTask, setDetailTask] = useState<Task | null>(null)
 
   const markdownComponents = useMemo<Components>(() => ({
@@ -94,12 +96,17 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
 
     // Fetch meetings for the selected date
     setIsFetchingMeetings(true)
+    setFetchError(null)
     const dateString = viewDate.toISOString()
     window.api.meetings.getUpcoming(dateString).then(meetings => {
       setIsFetchingMeetings(false)
-      if (meetings) setTodayMeetings(meetings)
-    }).catch(() => setIsFetchingMeetings(false))
-  }, [isOpen, viewDate])
+      setTodayMeetings(meetings ?? [])
+    }).catch((err) => {
+      setIsFetchingMeetings(false)
+      setTodayMeetings([])
+      setFetchError(`Could not read your local Calendar: ${err?.message ?? err}`)
+    })
+  }, [isOpen, viewDate, refetchNonce])
 
   // Generate briefing when a meeting is selected
   useEffect(() => {
@@ -196,6 +203,16 @@ export default function MeetingBriefingPanel({ isOpen, onClose }: MeetingBriefin
                 <div className="flex items-center gap-2 text-[#888] font-mono text-[11px] mt-4">
                   <div className="w-3 h-3 border-2 border-[#c45d2e] border-t-transparent rounded-full animate-spin" />
                   Loading calendar...
+                </div>
+              ) : fetchError ? (
+                <div className="text-center py-8 flex flex-col items-center gap-3">
+                  <span className="text-[#e0765a] font-mono text-[11px]">{fetchError}</span>
+                  <button
+                    onClick={() => setRefetchNonce(n => n + 1)}
+                    className="text-[#c45d2e] hover:text-[#e0765a] font-mono text-[10px] uppercase tracking-wider border border-[#c45d2e]/40 hover:border-[#c45d2e] rounded px-3 py-1.5 transition-colors"
+                  >
+                    Retry
+                  </button>
                 </div>
               ) : todayMeetings.length === 0 ? (
                 <div className="text-center py-8 text-[#666] font-mono text-[11px]">
