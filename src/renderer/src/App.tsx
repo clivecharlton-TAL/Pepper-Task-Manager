@@ -3,12 +3,14 @@ import { useLocation } from './hooks/useLocation'
 import MainWindow from './components/MainWindow'
 import QuickAddPanel from './components/QuickAdd/QuickAddPanel'
 import { useTaskStore } from './stores/taskStore'
+import { useNoteStore } from './stores/noteStore'
 import { useAttachmentCountStore } from './stores/attachmentCountStore'
 import { useSubTaskCountStore } from './stores/subTaskCountStore'
 
 export default function App() {
   const { isQuickAdd } = useLocation()
   const { labels, tasks, loadTasks, loadAllTasks, loadLabels, init } = useTaskStore()
+  const { loadNotes, loadAllNotes, init: initNotes } = useNoteStore()
   const { loadCounts } = useAttachmentCountStore()
   const { loadCounts: loadSubTaskCounts } = useSubTaskCountStore()
 
@@ -17,9 +19,13 @@ export default function App() {
     if (!isQuickAdd) {
       loadTasks()
       loadAllTasks()
+      loadNotes()
+      loadAllNotes()
       loadCounts()
       loadSubTaskCounts()
-      return init()
+      const unsubTasks = init()
+      const unsubNotes = initNotes()
+      return () => { unsubTasks(); unsubNotes() }
     }
   }, [isQuickAdd])
 
@@ -29,6 +35,8 @@ export default function App() {
       loadLabels()
       loadTasks()
       loadAllTasks()
+      loadNotes()
+      loadAllNotes()
     }
   }, [labels.length, isQuickAdd])
 

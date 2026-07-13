@@ -2,13 +2,15 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { Task, TaskPriority, TaskStatus, LabelNode, TaskAttachmentWithStatus, SubTask, TaskLink } from '../../../../shared/types'
+import type { Task, TaskPriority, TaskStatus, LabelNode, TaskAttachmentWithStatus, SubTask, TaskLink, Note } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
+import { useNoteStore } from '../../stores/noteStore'
 import LabelTreeView from '../QuickAdd/LabelTreeView'
 import MentionPopover from '../shared/MentionPopover'
 import { TEAM_MEMBERS } from '../../../../shared/team'
 import { useSubTaskCountStore } from '../../stores/subTaskCountStore'
 import SubTaskDetailModal from './SubTaskDetailModal'
+import NotePreviewFlyout from '../Notes/NotePreviewFlyout'
 
 // ── FY quarter helpers (FY starts 1 April) ───────────────────────────────────
 
@@ -71,7 +73,8 @@ interface Props {
 }
 
 export default function TaskDetailModal({ task, onClose }: Props) {
-  const { labels, updateTask } = useTaskStore()
+  const { labels, updateTask, setViewMode } = useTaskStore()
+  const requestOpenNote = useNoteStore(s => s.requestOpenNote)
   const flat = useMemo(() => flattenNodes(labels), [labels])
 
   const [title,          setTitle]          = useState(task.title)
@@ -97,6 +100,8 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [showLinkInput,  setShowLinkInput]  = useState(false)
   const [linkInput,      setLinkInput]      = useState('')
   const linkInputRef = useRef<HTMLInputElement>(null)
+  const [linkedNotes,     setLinkedNotes]     = useState<Note[]>([])
+  const [previewNoteId,   setPreviewNoteId]   = useState<string | null>(null)
   const [subTasks,        setSubTasks]        = useState<SubTask[]>([])
   const [newSubTaskTitle, setNewSubTaskTitle] = useState('')
   const [rowMention,      setRowMention]      = useState<{ id: string; query: string; highlight: number; rect: DOMRect | null } | null>(null)
@@ -279,7 +284,14 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   useEffect(() => {
     window.api.attachments.list(task.id).then(setAttachments)
     window.api.links.list(task.id).then(setLinks)
+    window.api.notes.list({ task_id: task.id }).then(setLinkedNotes)
   }, [task.id])
+
+  const handleOpenNoteInNotes = (noteId: string) => {
+    requestOpenNote(noteId)
+    setViewMode('notes')
+    handleClose()
+  }
 
   const handleAttachFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -881,6 +893,34 @@ export default function TaskDetailModal({ task, onClose }: Props) {
               </div>
             )}
 
+            {/* Linked notes */}
+            {linkedNotes.length > 0 && (
+              <div className="flex items-start gap-4">
+                <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] w-20 pt-1 flex-shrink-0">Notes</span>
+                <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+                  {linkedNotes.map(n => (
+                    <button
+                      key={n.id}
+                      onMouseDown={e => e.stopPropagation()}
+                      onClick={() => setPreviewNoteId(prev => prev === n.id ? null : n.id)}
+                      className={`font-mono text-[10px] px-2 py-0.5 rounded flex items-center gap-1 transition-colors max-w-[200px] ${
+                        previewNoteId === n.id
+                          ? 'bg-[#1a2a3a] text-[#7ab8e0] ring-1 ring-[#4a9eca]/50'
+                          : 'bg-[#1a2a3a] text-[#4a9eca] hover:text-[#7ab8e0]'
+                      }`}
+                      title={n.title || 'Untitled note'}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0">
+                        <path d="M2 1h4l3 3v5H2V1z" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round"/>
+                        <path d="M6 1v3h3" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round"/>
+                      </svg>
+                      <span className="truncate">{n.title || 'Untitled note'}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Attachments + Links */}
             <div className="flex items-start gap-4">
               <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] w-20 pt-1 flex-shrink-0">Files</span>
@@ -1118,6 +1158,18 @@ export default function TaskDetailModal({ task, onClose }: Props) {
             {isDirty ? 'Save changes' : 'Saved'}
           </button>
         </div>
+
+        {previewNoteId && (() => {
+          const previewNote = linkedNotes.find(n => n.id === previewNoteId)
+          if (!previewNote) return null
+          return (
+            <NotePreviewFlyout
+              note={previewNote}
+              onClose={() => setPreviewNoteId(null)}
+              onOpenInNotes={() => handleOpenNoteInNotes(previewNote.id)}
+            />
+          )
+        })()}
       </div>
 
       {openSubTask && (

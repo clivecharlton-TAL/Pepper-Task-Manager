@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { useTaskStore } from '../../stores/taskStore'
+import { useNoteStore } from '../../stores/noteStore'
 import type { LabelNode, Task } from '../../../../shared/types'
 
 function collectIds(node: LabelNode): string[] {
@@ -22,6 +23,7 @@ const depthTextClass = (depth: number, isActive: boolean) => {
 function LabelRow({ node, depth, tasks }: { node: LabelNode; depth: number; tasks: Task[] }) {
   const [expanded, setExpanded] = useState(false)
   const { activeLabel, setActiveLabel } = useTaskStore()
+  const setActiveNoteLabel = useNoteStore(s => s.setActiveLabel)
   const { setNodeRef, isOver } = useDroppable({ id: `label:${node.id}` })
   const hasChildren = node.children.length > 0
   const isActive = activeLabel === node.id
@@ -30,7 +32,7 @@ function LabelRow({ node, depth, tasks }: { node: LabelNode; depth: number; task
   return (
     <div ref={setNodeRef}>
       <button
-        onClick={() => { setActiveLabel(node.id); if (hasChildren) setExpanded(e => !e) }}
+        onClick={() => { setActiveLabel(node.id); setActiveNoteLabel(node.id); if (hasChildren) setExpanded(e => !e) }}
         className={`w-full flex items-center gap-2 py-1.5 px-2 rounded text-left transition-colors group ${
           isActive ? 'bg-[#3d2218]/60' : isOver ? 'bg-[#1e3a22]' : 'hover:bg-[#2a2a2a]'
         }`}

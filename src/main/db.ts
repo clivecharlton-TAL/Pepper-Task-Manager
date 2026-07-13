@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import initSqlJs, { Database } from 'sql.js'
-import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem, TaskAttachment, TaskAttachmentWithStatus, SubTask, TaskLink } from '../shared/types'
+import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem, TaskAttachment, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters } from '../shared/types'
 
 const DB_PATH = join(app.getPath('userData'), 'tasks.db')
 
@@ -96,6 +96,21 @@ function migrate(db: Database): void {
       priority TEXT NOT NULL DEFAULT 'medium',
       labels TEXT NOT NULL DEFAULT '[]',
       occurred_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS notes (
+      id                 TEXT PRIMARY KEY,
+      title              TEXT NOT NULL,
+      body               TEXT NOT NULL DEFAULT '',
+      labels             TEXT NOT NULL DEFAULT '[]',
+      task_id            TEXT,
+      meeting_title      TEXT,
+      meeting_start_time TEXT,
+      meeting_end_time   TEXT,
+      recording_path     TEXT,
+      transcript         TEXT,
+      created_at         TEXT NOT NULL,
+      updated_at         TEXT NOT NULL
     );
   `)
 
@@ -674,4 +689,101 @@ export async function countAttachments(): Promise<Record<string, number>> {
   const result: Record<string, number> = {}
   for (const r of rows) result[r.task_id] = r.n
   return result
+}
+
+// ─── Notes ──────────────────────────────────────────────────────────────────
+
+function parseNote(row: Record<string, unknown>): Note {
+  return {
+    ...(row as Omit<Note, 'labels'>),
+    labels: JSON.parse(row.labels as string),
+  }
+}
+
+export async function getNotes(filters: NoteFilters = {}): Promise<Note[]> {
+  const d = await getDb()
+  let sql = 'SELECT * FROM notes WHERE 1=1'
+  const params: (string | number | null)[] = []
+
+  if (filters.task_id) { sql += ' AND task_id = ?'; params.push(filters.task_id) }
+  if (filters.search) {
+    sql += ' AND (title LIKE ? OR body LIKE ? OR transcript LIKE ?)'
+    params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`)
+  }
+  if (filters.label) { sql += ' AND labels LIKE ?'; params.push(`%${filters.label}%`) }
+  sql += ' ORDER BY created_at DESC'
+
+  return all<Record<string, unknown>>(d, sql, params).map(parseNote)
+}
+
+export async function getNote(id: string): Promise<Note | null> {
+  const d = await getDb()
+  const row = get<Record<string, unknown>>(d, 'SELECT * FROM notes WHERE id = ?', [id])
+  return row ? parseNote(row) : null
+}
+
+export async function createNote(input: CreateNoteInput): Promise<Note> {
+  const d = await getDb()
+  const now = new Date().toISOString()
+  const note: Note = {
+    id: uuidv4(),
+    title: input.title,
+    body: input.body ?? '',
+    labels: input.labels ?? [],
+    task_id: input.task_id ?? null,
+    meeting_title: input.meeting_title ?? null,
+    meeting_start_time: input.meeting_start_time ?? null,
+    meeting_end_time: input.meeting_end_time ?? null,
+    recording_path: null,
+    transcript: null,
+    created_at: now,
+    updated_at: now,
+  }
+  run(d,
+    `INSERT INTO notes (id,title,body,labels,task_id,meeting_title,meeting_start_time,meeting_end_time,recording_path,transcript,created_at,updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [note.id, note.title, note.body, JSON.stringify(note.labels), note.task_id,
+     note.meeting_title, note.meeting_start_time, note.meeting_end_time,
+     note.recording_path, note.transcript, note.created_at, note.updated_at]
+  )
+  save()
+  return note
+}
+
+export async function updateNote(input: UpdateNoteInput): Promise<Note | null> {
+  const d = await getDb()
+  const existing = get<Record<string, unknown>>(d, 'SELECT * FROM notes WHERE id = ?', [input.id])
+  if (!existing) return null
+  const current = parseNote(existing)
+  const updated: Note = {
+    id: current.id,
+    title:              input.title ?? current.title,
+    body:               'body'               in input ? (input.body               ?? '')   : current.body,
+    labels:             input.labels ?? current.labels,
+    task_id:            'task_id'            in input ? (input.task_id            ?? null) : current.task_id,
+    meeting_title:      'meeting_title'      in input ? (input.meeting_title      ?? null) : current.meeting_title,
+    meeting_start_time: 'meeting_start_time' in input ? (input.meeting_start_time ?? null) : current.meeting_start_time,
+    meeting_end_time:   'meeting_end_time'   in input ? (input.meeting_end_time   ?? null) : current.meeting_end_time,
+    recording_path:     'recording_path'     in input ? (input.recording_path     ?? null) : current.recording_path,
+    transcript:         'transcript'         in input ? (input.transcript         ?? null) : current.transcript,
+    created_at: current.created_at,
+    updated_at: new Date().toISOString(),
+  }
+  run(d,
+    `UPDATE notes SET title=?, body=?, labels=?, task_id=?, meeting_title=?, meeting_start_time=?, meeting_end_time=?, recording_path=?, transcript=?, updated_at=? WHERE id=?`,
+    [updated.title, updated.body, JSON.stringify(updated.labels), updated.task_id,
+     updated.meeting_title, updated.meeting_start_time, updated.meeting_end_time,
+     updated.recording_path, updated.transcript, updated.updated_at, updated.id]
+  )
+  save()
+  return updated
+}
+
+export async function deleteNote(id: string): Promise<boolean> {
+  const d = await getDb()
+  const existing = get<{ id: string }>(d, 'SELECT id FROM notes WHERE id = ?', [id])
+  if (!existing) return false
+  run(d, 'DELETE FROM notes WHERE id = ?', [id])
+  save()
+  return true
 }

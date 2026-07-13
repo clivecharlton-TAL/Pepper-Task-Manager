@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask, TaskLink } from '../shared/types'
+import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters } from '../shared/types'
 
 const api = {
   tasks: {
@@ -85,6 +85,13 @@ const api = {
   },
   meetings: {
     getUpcoming: (dateString?: string): Promise<any> => ipcRenderer.invoke('meetings:upcoming', dateString),
+  },
+  notes: {
+    list:   (filters?: NoteFilters): Promise<Note[]>       => ipcRenderer.invoke('notes:list', filters),
+    get:    (id: string): Promise<Note | null>             => ipcRenderer.invoke('notes:get', id),
+    create: (input: CreateNoteInput): Promise<Note>        => ipcRenderer.invoke('notes:create', input),
+    update: (input: UpdateNoteInput): Promise<Note | null> => ipcRenderer.invoke('notes:update', input),
+    delete: (id: string): Promise<boolean>                 => ipcRenderer.invoke('notes:delete', id),
   },
   wallpapers: {
     list: (): Promise<string[]> => ipcRenderer.invoke('wallpapers:list'),

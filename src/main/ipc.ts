@@ -13,12 +13,12 @@ const ExcelJS = require('exceljs')
 
 const execAsync = promisify(exec)
 import Anthropic from '@anthropic-ai/sdk'
-import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink } from './db'
+import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink, getNotes, getNote, createNote, updateNote, deleteNote } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
 import { hasApiKey, saveApiKey, getCalendarIcsUrl, saveCalendarIcsUrl, streamDraft, streamQuery, streamBriefing } from './ai'
 import { broadcast } from './events'
 import { fetchUpcomingMeetings } from './meetings'
-import type { CreateTaskInput, UpdateTaskInput, TaskFilters } from '../shared/types'
+import type { CreateTaskInput, UpdateTaskInput, TaskFilters, CreateNoteInput, UpdateNoteInput, NoteFilters } from '../shared/types'
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('tasks:list', (_e, filters: TaskFilters) => getTasks(filters))
@@ -353,6 +353,24 @@ export function registerIpcHandlers(): void {
       broadcast({ type: 'labels:changed', added: 1 })
     }
     return result
+  })
+
+  ipcMain.handle('notes:list',   (_e, filters?: NoteFilters) => getNotes(filters))
+  ipcMain.handle('notes:get',    (_e, id: string) => getNote(id))
+  ipcMain.handle('notes:create', async (_e, input: CreateNoteInput) => {
+    const note = await createNote(input)
+    broadcast({ type: 'note:created', note })
+    return note
+  })
+  ipcMain.handle('notes:update', async (_e, input: UpdateNoteInput) => {
+    const note = await updateNote(input)
+    if (note) broadcast({ type: 'note:updated', note })
+    return note
+  })
+  ipcMain.handle('notes:delete', async (_e, id: string) => {
+    const ok = await deleteNote(id)
+    if (ok) broadcast({ type: 'note:deleted', id })
+    return ok
   })
 
   ipcMain.handle('wallpapers:list', () => {

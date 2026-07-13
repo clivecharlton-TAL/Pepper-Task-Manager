@@ -72,6 +72,9 @@ export type DomainEvent =
   | { type: 'task:updated'; task: Task }
   | { type: 'task:deleted'; id: string }
   | { type: 'labels:changed'; added: number }
+  | { type: 'note:created'; note: Note }
+  | { type: 'note:updated'; note: Note }
+  | { type: 'note:deleted'; id: string }
 
 export interface VelocityPoint {
   week: string
@@ -163,3 +166,47 @@ export interface Meeting {
 }
 
 export type DomainEventWithMeeting = DomainEvent | { type: 'meeting:upcoming'; meeting: Meeting }
+
+export interface Note {
+  id: string
+  title: string
+  body: string
+  labels: string[]
+  task_id: string | null
+  meeting_title: string | null
+  meeting_start_time: string | null
+  meeting_end_time: string | null
+  recording_path: string | null
+  transcript: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateNoteInput {
+  title: string
+  body?: string
+  labels?: string[]
+  task_id?: string | null
+  meeting_title?: string | null
+  meeting_start_time?: string | null
+  meeting_end_time?: string | null
+}
+
+export interface UpdateNoteInput {
+  id: string
+  title?: string
+  body?: string
+  labels?: string[]
+  task_id?: string | null
+  meeting_title?: string | null
+  meeting_start_time?: string | null
+  meeting_end_time?: string | null
+  recording_path?: string | null
+  transcript?: string | null
+}
+
+export interface NoteFilters {
+  label?: string
+  task_id?: string
+  search?: string
+}

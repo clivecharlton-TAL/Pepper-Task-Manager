@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
 import { useTaskStore, type ListSort, type ListGroup } from '../../stores/taskStore'
+import { useNoteStore } from '../../stores/noteStore'
 import type { TaskStatus } from '../../../../shared/types'
 
 const SORT_OPTIONS: { value: ListSort; label: string }[] = [
@@ -184,7 +185,9 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
     hiddenTags, toggleHiddenTag,
     labels,
   } = useTaskStore()
+  const { searchQuery: noteSearchQuery, setSearchQuery: setNoteSearchQuery } = useNoteStore()
   const inputRef = useRef<HTMLInputElement>(null)
+  const isNotes = viewMode === 'notes'
 
   const tagOptions = useMemo(
     () => labels.filter(l => l.id.startsWith('+')).map(l => ({ value: l.id, label: l.name })),
@@ -203,8 +206,10 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  const clear = () => { setSearchQuery(''); inputRef.current?.focus() }
-  const isActive = searchQuery.length > 0
+  const activeSearchQuery = isNotes ? noteSearchQuery : searchQuery
+  const setActiveSearchQuery = isNotes ? setNoteSearchQuery : setSearchQuery
+  const clear = () => { setActiveSearchQuery(''); inputRef.current?.focus() }
+  const isActive = activeSearchQuery.length > 0
 
   return (
     <div
@@ -217,6 +222,8 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
         <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Files</span>
       ) : viewMode === 'calendar' ? (
         <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Calendar</span>
+      ) : viewMode === 'notes' ? (
+        <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Notes</span>
       ) : (activeLabel || activeStatus || activePriority || activeDue) ? (
         <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
           {[
@@ -334,6 +341,18 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
             <rect x="8.5" y="0" width="1.5" height="4" rx="0.75"/>
           </svg>
         </button>
+        <button
+          onClick={() => setViewMode('notes')}
+          title="Notes"
+          className={`p-1.5 rounded transition-colors ${viewMode === 'notes' ? 'bg-[#383838] text-[#c45d2e]' : 'text-[#555555] hover:text-[#a0a0a0]'}`}
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
+            <path d="M2 0.5C1.17 0.5 0.5 1.17 0.5 2V11C0.5 11.83 1.17 12.5 2 12.5H11C11.83 12.5 12.5 11.83 12.5 11V4.5L8.5 0.5H2Z" fillOpacity="0"/>
+            <path d="M2 0.5H8L12.5 5V11C12.5 11.83 11.83 12.5 11 12.5H2C1.17 12.5 0.5 11.83 0.5 11V2C0.5 1.17 1.17 0.5 2 0.5Z" fillOpacity="0" stroke="currentColor" strokeWidth="1"/>
+            <rect x="2.5" y="6" width="6" height="1" rx="0.5"/>
+            <rect x="2.5" y="8.5" width="6" height="1" rx="0.5"/>
+          </svg>
+        </button>
       </div>
 
       {/* AI Chat toggle */}
@@ -388,13 +407,13 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
         </span>
         <input
           ref={inputRef}
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
+          value={activeSearchQuery}
+          onChange={e => setActiveSearchQuery(e.target.value)}
           onKeyDown={e => {
             if (e.key === 'Escape') { clear(); e.currentTarget.blur() }
             e.stopPropagation()
           }}
-          placeholder="Search tasks…  ⌘F"
+          placeholder={isNotes ? 'Search notes…  ⌘F' : 'Search tasks…  ⌘F'}
           className="bg-transparent font-mono text-[12px] text-[#f0f0f0] placeholder-[#3a3a3a] w-48 focus:outline-none"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         />
