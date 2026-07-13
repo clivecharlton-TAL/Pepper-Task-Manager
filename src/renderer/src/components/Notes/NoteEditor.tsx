@@ -1,10 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Placeholder from '@tiptap/extension-placeholder'
+import { Markdown, type MarkdownStorage } from 'tiptap-markdown'
 import type { Note, Meeting } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
 import { useNoteStore } from '../../stores/noteStore'
 import LabelPicker from '../QuickAdd/LabelPicker'
 import TaskLinkPicker from './TaskLinkPicker'
 import MeetingPicker from './MeetingPicker'
+import EditorToolbar from './EditorToolbar'
+
+function getMarkdown(editor: Editor): string {
+  const storage = editor.storage as unknown as Record<string, unknown>
+  return (storage.markdown as MarkdownStorage).getMarkdown()
+}
 
 interface Props {
   note: Note
@@ -16,13 +26,27 @@ export default function NoteEditor({ note, onClose }: Props) {
   const allTasks = useTaskStore(s => s.allTasks)
   const updateNote = useNoteStore(s => s.updateNote)
   const [title, setTitle] = useState(note.title)
-  const [body, setBody] = useState(note.body)
   const [showMeetingPicker, setShowMeetingPicker] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({ placeholder: 'Write your notes…' }),
+      Markdown.configure({ html: false, transformCopiedText: true }),
+    ],
+    content: note.body,
+    onUpdate: ({ editor }) => {
+      scheduleSave({ body: getMarkdown(editor) })
+    },
+  })
+
   useEffect(() => {
     setTitle(note.title)
-    setBody(note.body)
+    if (editor && getMarkdown(editor) !== note.body) {
+      editor.commands.setContent(note.body)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.id])
 
   const scheduleSave = (patch: Partial<Pick<Note, 'title' | 'body'>>) => {
@@ -58,7 +82,7 @@ export default function NoteEditor({ note, onClose }: Props) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="px-4 pt-4 space-y-3">
         <input
           value={title}
           onChange={e => { setTitle(e.target.value); scheduleSave({ title: e.target.value }) }}
@@ -96,16 +120,15 @@ export default function NoteEditor({ note, onClose }: Props) {
             + Link to meeting
           </button>
         )}
+      </div>
 
-        <textarea
-          value={body}
-          onChange={e => { setBody(e.target.value); scheduleSave({ body: e.target.value }) }}
-          placeholder="Write your notes…"
-          className="w-full min-h-[240px] bg-transparent text-[13px] text-[#d0d0d0] placeholder-[#4a4a4a] leading-relaxed resize-none focus:outline-none custom-scrollbar"
-        />
+      <EditorToolbar editor={editor} />
+
+      <div className="flex-1 overflow-y-auto px-4 py-3 custom-scrollbar">
+        <EditorContent editor={editor} className="note-prose" />
 
         {note.transcript && (
-          <div className="pt-3 border-t border-[#272727]">
+          <div className="pt-3 mt-3 border-t border-[#272727]">
             <p className="font-mono text-[10px] tracking-widest uppercase text-[#555555] mb-2">Transcript</p>
             <p className="text-[12px] text-[#999999] leading-relaxed whitespace-pre-wrap">{note.transcript}</p>
           </div>

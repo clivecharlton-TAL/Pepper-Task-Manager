@@ -51,3 +51,44 @@ input:focus, textarea:focus { outline: none; }
 /* Drag region for frameless window */
 .drag-region { -webkit-app-region: drag; }
 .no-drag { -webkit-app-region: no-drag; }
+
+/* Tiptap note editor content — mirrors the read-only ReactMarkdown styling used
+   for task descriptions so notes look the same whether edited or previewed. */
+.note-prose .ProseMirror {
+  outline: none;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #d0d0d0;
+  min-height: 240px;
+}
+.note-prose .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: #4a4a4a;
+}
+.note-prose h1 { font-size: 20px; font-weight: 600; color: #e0e0e0; margin: 20px 0 8px; }
+.note-prose h1:first-child { margin-top: 0; }
+.note-prose h2 { font-size: 16px; font-weight: 600; color: #d4d4d4; margin: 16px 0 6px; }
+.note-prose h2:first-child { margin-top: 0; }
+.note-prose h3 { font-size: 14px; font-weight: 600; color: #c8c8c8; margin: 14px 0 6px; }
+.note-prose h3:first-child { margin-top: 0; }
+.note-prose p { margin-bottom: 8px; color: #b0b0b0; }
+.note-prose p:last-child { margin-bottom: 0; }
+.note-prose strong { font-weight: 600; color: #d4d4d4; }
+.note-prose em { font-style: italic; color: #a0a0a0; }
+.note-prose s { color: #888888; }
+.note-prose ul, .note-prose ol { margin: 0 0 8px 22px; color: #b0b0b0; }
+.note-prose ul { list-style: disc; }
+.note-prose ol { list-style: decimal; }
+.note-prose li { margin-bottom: 2px; }
+.note-prose li p { margin-bottom: 0; }
+.note-prose blockquote { border-left: 2px solid var(--accent); padding-left: 12px; margin: 8px 0; color: #888888; font-style: italic; }
+.note-prose code { background: #1c1c1c; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-family: var(--mono); font-size: 11px; color: var(--accent); }
+.note-prose pre { background: #1c1c1c; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin: 8px 0; overflow-x: auto; }
+.note-prose pre code { background: none; border: none; padding: 0; color: var(--accent); font-size: 12px; }
+.note-prose hr { border: none; border-top: 1px solid #303030; margin: 16px 0; }
+.note-prose a { color: #4a9eca; }
+.note-prose ul[data-type="taskList"] { list-style: none; margin-left: 0; }
+.note-prose ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 6px; }
