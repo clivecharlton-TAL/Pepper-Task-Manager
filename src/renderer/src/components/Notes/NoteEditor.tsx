@@ -6,6 +6,7 @@ import { Markdown, type MarkdownStorage } from 'tiptap-markdown'
 import type { Note, Meeting } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
 import { useNoteStore } from '../../stores/noteStore'
+import { useRecordingStore } from '../../stores/recordingStore'
 import LabelPicker from '../QuickAdd/LabelPicker'
 import TaskLinkPicker from './TaskLinkPicker'
 import MeetingPicker from './MeetingPicker'
@@ -25,9 +26,38 @@ export default function NoteEditor({ note, onClose }: Props) {
   const labels = useTaskStore(s => s.labels)
   const allTasks = useTaskStore(s => s.allTasks)
   const updateNote = useNoteStore(s => s.updateNote)
+  const archiveNote = useNoteStore(s => s.archiveNote)
+  const unarchiveNote = useNoteStore(s => s.unarchiveNote)
+  const recordingStatus = useRecordingStore(s => s.status)
+  const recordingNoteId = useRecordingStore(s => s.activeNoteId)
+  const recordingError = useRecordingStore(s => s.errorMessage)
+  const startRecording = useRecordingStore(s => s.start)
+  const stopRecording = useRecordingStore(s => s.stop)
   const [title, setTitle] = useState(note.title)
   const [showMeetingPicker, setShowMeetingPicker] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const isRecordingThisNote = recordingStatus === 'recording' && recordingNoteId === note.id
+  const isTranscribingThisNote = recordingStatus === 'transcribing' && recordingNoteId === note.id
+  const isAnalyzingThisNote = recordingStatus === 'analyzing' && recordingNoteId === note.id
+  const isRecordingElsewhere = (recordingStatus === 'recording' || recordingStatus === 'transcribing' || recordingStatus === 'analyzing') && recordingNoteId !== note.id
+
+  const handleRecordClick = async () => {
+    if (isRecordingThisNote) {
+      await stopRecording()
+      return
+    }
+    const permissions = await window.api.recording.permissions()
+    if (permissions.microphone === 'denied' || permissions.screen === 'denied') {
+      useRecordingStore.setState({
+        status: 'error',
+        activeNoteId: null,
+        errorMessage: 'Microphone or Screen Recording permission is required. Open System Settings → Privacy & Security, enable Pepper Tasks for both, then fully quit and relaunch the app. (You may need to re-grant this after each rebuild.)',
+      })
+      return
+    }
+    await startRecording(note.id)
+  }
 
   const editor = useEditor({
     extensions: [
@@ -74,13 +104,53 @@ export default function NoteEditor({ note, onClose }: Props) {
     <div className="flex flex-col h-full border-l border-[#272727] w-[420px] flex-shrink-0">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#272727]">
         <span className="font-mono text-[10px] tracking-widest uppercase text-[#555555]">Note</span>
-        <button
-          onClick={onClose}
-          className="font-mono text-[14px] text-[#555555] hover:text-[#f0f0f0] transition-colors leading-none"
-        >
-          ×
-        </button>
+        <div className="flex items-center gap-3">
+          {isTranscribingThisNote ? (
+            <span className="font-mono text-[10px] text-[#636366] flex items-center gap-1.5">
+              <span className="inline-block w-2.5 h-2.5 rounded-full border border-[#636366] border-t-transparent animate-spin" />
+              Transcribing…
+            </span>
+          ) : isAnalyzingThisNote ? (
+            <span className="font-mono text-[10px] text-[#636366] flex items-center gap-1.5">
+              <span className="inline-block w-2.5 h-2.5 rounded-full border border-[#636366] border-t-transparent animate-spin" />
+              Analyzing…
+            </span>
+          ) : (
+            <button
+              onClick={handleRecordClick}
+              disabled={isRecordingElsewhere}
+              title={isRecordingElsewhere ? 'Recording in progress on another note' : undefined}
+              className={`font-mono text-[10px] transition-colors ${
+                isRecordingThisNote
+                  ? 'text-[#c45d2e] animate-pulse'
+                  : isRecordingElsewhere
+                    ? 'text-[#3a3a3a] cursor-not-allowed'
+                    : 'text-[#636366] hover:text-[#c45d2e]'
+              }`}
+            >
+              {isRecordingThisNote ? '■ Stop' : '● Record'}
+            </button>
+          )}
+          <button
+            onClick={() => note.archived ? unarchiveNote(note.id) : archiveNote(note.id)}
+            className="font-mono text-[10px] text-[#636366] hover:text-[#c45d2e] transition-colors"
+          >
+            {note.archived ? 'Unarchive' : 'Archive'}
+          </button>
+          <button
+            onClick={onClose}
+            className="font-mono text-[14px] text-[#555555] hover:text-[#f0f0f0] transition-colors leading-none"
+          >
+            ×
+          </button>
+        </div>
       </div>
+
+      {recordingStatus === 'error' && recordingError && (
+        <div className="px-4 pt-3">
+          <p className="font-mono text-[10px] text-[#FC2847] leading-relaxed">{recordingError}</p>
+        </div>
+      )}
 
       <div className="px-4 pt-4 space-y-3">
         <input

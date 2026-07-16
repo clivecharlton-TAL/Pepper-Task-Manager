@@ -22,6 +22,8 @@ interface Props {
 
 export default function NoteCard({ note, flatLabels, allTasks, onOpen, isLast }: Props) {
   const deleteNote = useNoteStore(s => s.deleteNote)
+  const archiveNote = useNoteStore(s => s.archiveNote)
+  const unarchiveNote = useNoteStore(s => s.unarchiveNote)
   const preview = note.body ? stripMarkdown(note.body) : note.transcript ? stripMarkdown(note.transcript) : null
   const labelMeta = note.labels
     .map(id => flatLabels.find(l => l.id === id))
@@ -31,7 +33,7 @@ export default function NoteCard({ note, flatLabels, allTasks, onOpen, isLast }:
   return (
     <div className="group">
       <div
-        className="flex items-start gap-3 py-3 px-3 -mx-3 cursor-pointer rounded-lg transition-colors hover:bg-[#242424]"
+        className={`flex items-start gap-3 py-3 px-3 -mx-3 cursor-pointer rounded-lg transition-colors hover:bg-[#242424] ${note.archived ? 'opacity-50' : ''}`}
         onClick={() => onOpen(note)}
       >
         <div className="flex-1 min-w-0">
@@ -76,12 +78,22 @@ export default function NoteCard({ note, flatLabels, allTasks, onOpen, isLast }:
           </div>
         </div>
 
-        <button
-          onClick={e => { e.stopPropagation(); deleteNote(note.id) }}
-          className="flex-shrink-0 font-mono text-[14px] text-[#333333] hover:text-[#FC2847] transition-colors opacity-0 group-hover:opacity-100 leading-none mt-0.5"
-        >
-          ×
-        </button>
+        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
+          <button
+            onClick={e => { e.stopPropagation(); note.archived ? unarchiveNote(note.id) : archiveNote(note.id) }}
+            title={note.archived ? 'Unarchive' : 'Archive'}
+            className="font-mono text-[13px] text-[#333333] hover:text-[#c45d2e] transition-colors leading-none mt-0.5"
+          >
+            {note.archived ? '↩' : '✓'}
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); deleteNote(note.id) }}
+            title="Delete"
+            className="font-mono text-[14px] text-[#333333] hover:text-[#FC2847] transition-colors leading-none mt-0.5"
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       {!isLast && <div className="h-px bg-[#272727] mx-0" />}

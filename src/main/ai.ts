@@ -377,3 +377,45 @@ Please generate the briefing.`
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// analyzeTranscript — Group CTO-style analysis of a meeting transcript
+// ---------------------------------------------------------------------------
+
+const CTO_ANALYSIS_SYSTEM_PROMPT = `You are a Group CTO reviewing a transcript of a meeting you just attended.
+Analyze it the way a technical executive would: focus on strategic and technical risk, cross-team impact,
+resourcing implications, technical debt, and decisions that matter beyond the room.
+
+Use clean markdown with these sections, in this order:
+## Summary
+A 2-3 sentence executive summary of what the meeting was about and its outcome.
+
+## Key Decisions
+Bullet list of decisions that were made. Omit this section if none were made.
+
+## Risks & Concerns
+Bullet list of technical, delivery, or organizational risks raised or implied by the discussion. Omit if none.
+
+## Action Items
+Bullet list of concrete follow-up actions, phrased as plain text (no links, no HTML tags, no task IDs —
+this is a suggested list only, not a task-creation mechanism). Omit if none.
+
+Be concise and concrete. Do not restate the transcript. Do not invent content not supported by the transcript.
+If the transcript is too short or unclear to analyze meaningfully, say so briefly rather than padding with generic text.`
+
+export async function analyzeTranscript(transcript: string): Promise<string> {
+  const apiKey = readConfig().anthropicApiKey
+  if (!apiKey) throw new Error('NO_API_KEY')
+
+  const client = new Anthropic({ apiKey })
+
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2048,
+    system: CTO_ANALYSIS_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: `Meeting transcript:\n\n${transcript}` }]
+  })
+
+  const textBlock = message.content.find((b): b is Anthropic.TextBlock => b.type === 'text')
+  return textBlock?.text.trim() ?? ''
+}

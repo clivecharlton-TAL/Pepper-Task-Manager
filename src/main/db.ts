@@ -109,6 +109,7 @@ function migrate(db: Database): void {
       meeting_end_time   TEXT,
       recording_path     TEXT,
       transcript         TEXT,
+      archived           INTEGER NOT NULL DEFAULT 0,
       created_at         TEXT NOT NULL,
       updated_at         TEXT NOT NULL
     );
@@ -117,6 +118,7 @@ function migrate(db: Database): void {
   // Migration: add assigned column to existing databases
   try { db.run(`ALTER TABLE tasks ADD COLUMN assigned TEXT NOT NULL DEFAULT '[]'`) } catch { /* column already exists */ }
   try { db.run(`ALTER TABLE sub_tasks ADD COLUMN notes TEXT`) } catch { /* column already exists */ }
+  try { db.run(`ALTER TABLE notes ADD COLUMN archived INTEGER NOT NULL DEFAULT 0`) } catch { /* column already exists */ }
 
   seedLabels(db)
   seedCrossCuttingLabels(db)
@@ -695,8 +697,9 @@ export async function countAttachments(): Promise<Record<string, number>> {
 
 function parseNote(row: Record<string, unknown>): Note {
   return {
-    ...(row as Omit<Note, 'labels'>),
+    ...(row as Omit<Note, 'labels' | 'archived'>),
     labels: JSON.parse(row.labels as string),
+    archived: row.archived === 1,
   }
 }
 
@@ -705,6 +708,7 @@ export async function getNotes(filters: NoteFilters = {}): Promise<Note[]> {
   let sql = 'SELECT * FROM notes WHERE 1=1'
   const params: (string | number | null)[] = []
 
+  if (filters.archived !== undefined) { sql += ' AND archived = ?'; params.push(filters.archived ? 1 : 0) }
   if (filters.task_id) { sql += ' AND task_id = ?'; params.push(filters.task_id) }
   if (filters.search) {
     sql += ' AND (title LIKE ? OR body LIKE ? OR transcript LIKE ?)'
@@ -736,15 +740,16 @@ export async function createNote(input: CreateNoteInput): Promise<Note> {
     meeting_end_time: input.meeting_end_time ?? null,
     recording_path: null,
     transcript: null,
+    archived: false,
     created_at: now,
     updated_at: now,
   }
   run(d,
-    `INSERT INTO notes (id,title,body,labels,task_id,meeting_title,meeting_start_time,meeting_end_time,recording_path,transcript,created_at,updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO notes (id,title,body,labels,task_id,meeting_title,meeting_start_time,meeting_end_time,recording_path,transcript,archived,created_at,updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [note.id, note.title, note.body, JSON.stringify(note.labels), note.task_id,
      note.meeting_title, note.meeting_start_time, note.meeting_end_time,
-     note.recording_path, note.transcript, note.created_at, note.updated_at]
+     note.recording_path, note.transcript, note.archived ? 1 : 0, note.created_at, note.updated_at]
   )
   save()
   return note
@@ -766,14 +771,15 @@ export async function updateNote(input: UpdateNoteInput): Promise<Note | null> {
     meeting_end_time:   'meeting_end_time'   in input ? (input.meeting_end_time   ?? null) : current.meeting_end_time,
     recording_path:     'recording_path'     in input ? (input.recording_path     ?? null) : current.recording_path,
     transcript:         'transcript'         in input ? (input.transcript         ?? null) : current.transcript,
+    archived:           'archived'           in input ? (input.archived           ?? false) : current.archived,
     created_at: current.created_at,
     updated_at: new Date().toISOString(),
   }
   run(d,
-    `UPDATE notes SET title=?, body=?, labels=?, task_id=?, meeting_title=?, meeting_start_time=?, meeting_end_time=?, recording_path=?, transcript=?, updated_at=? WHERE id=?`,
+    `UPDATE notes SET title=?, body=?, labels=?, task_id=?, meeting_title=?, meeting_start_time=?, meeting_end_time=?, recording_path=?, transcript=?, archived=?, updated_at=? WHERE id=?`,
     [updated.title, updated.body, JSON.stringify(updated.labels), updated.task_id,
      updated.meeting_title, updated.meeting_start_time, updated.meeting_end_time,
-     updated.recording_path, updated.transcript, updated.updated_at, updated.id]
+     updated.recording_path, updated.transcript, updated.archived ? 1 : 0, updated.updated_at, updated.id]
   )
   save()
   return updated

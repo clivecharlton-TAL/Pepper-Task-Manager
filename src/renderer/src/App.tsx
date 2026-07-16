@@ -6,6 +6,7 @@ import { useTaskStore } from './stores/taskStore'
 import { useNoteStore } from './stores/noteStore'
 import { useAttachmentCountStore } from './stores/attachmentCountStore'
 import { useSubTaskCountStore } from './stores/subTaskCountStore'
+import { useRecordingStore } from './stores/recordingStore'
 
 export default function App() {
   const { isQuickAdd } = useLocation()
@@ -13,6 +14,7 @@ export default function App() {
   const { loadNotes, loadAllNotes, init: initNotes } = useNoteStore()
   const { loadCounts } = useAttachmentCountStore()
   const { loadCounts: loadSubTaskCounts } = useSubTaskCountStore()
+  const { init: initRecording } = useRecordingStore()
 
   useEffect(() => {
     loadLabels()
@@ -25,7 +27,8 @@ export default function App() {
       loadSubTaskCounts()
       const unsubTasks = init()
       const unsubNotes = initNotes()
-      return () => { unsubTasks(); unsubNotes() }
+      const unsubRecording = initRecording()
+      return () => { unsubTasks(); unsubNotes(); unsubRecording() }
     }
   }, [isQuickAdd])
 

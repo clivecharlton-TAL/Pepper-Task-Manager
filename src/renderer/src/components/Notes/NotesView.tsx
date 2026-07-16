@@ -9,7 +9,7 @@ import NoteEditor from './NoteEditor'
 export default function NotesView() {
   const labels = useTaskStore(s => s.labels)
   const allTasks = useTaskStore(s => s.allTasks)
-  const { notes, allNotes, searchQuery, loadNotes, createNote, deleteNote, pendingOpenNoteId, clearPendingOpenNote } = useNoteStore()
+  const { notes, allNotes, searchQuery, loadNotes, createNote, deleteNote, showArchived, setShowArchived, pendingOpenNoteId, clearPendingOpenNote } = useNoteStore()
   const [selected, setSelected] = useState<Note | null>(null)
 
   useEffect(() => { loadNotes() }, [])
@@ -79,20 +79,31 @@ export default function NotesView() {
     <div className="flex flex-1 overflow-hidden">
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-8 py-4">
-          <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 mb-4 px-3 py-1.5 rounded font-mono text-[11px] text-[#888888] bg-[#242424] hover:bg-[#2a2a2a] hover:text-[#f0f0f0] transition-colors"
-          >
-            + New note
-          </button>
+          <div className="flex items-center gap-2 mb-4">
+            <button
+              onClick={handleCreate}
+              className="flex items-center gap-2 px-3 py-1.5 rounded font-mono text-[11px] text-[#888888] bg-[#242424] hover:bg-[#2a2a2a] hover:text-[#f0f0f0] transition-colors"
+            >
+              + New note
+            </button>
+            <button
+              onClick={() => setShowArchived(!showArchived)}
+              title={showArchived ? 'Show active notes' : 'Show archived notes'}
+              className={`px-3 py-1.5 rounded font-mono text-[11px] transition-colors ${
+                showArchived ? 'bg-[#3d2218] text-[#c45d2e]' : 'text-[#666666] bg-[#242424] hover:bg-[#2a2a2a] hover:text-[#f0f0f0]'
+              }`}
+            >
+              Archived
+            </button>
+          </div>
 
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <p className="font-mono text-[9px] tracking-[0.35em] uppercase mb-3 text-[#4a4a4a]">
-                {searchQuery ? 'no results' : 'no notes yet'}
+                {searchQuery ? 'no results' : showArchived ? 'no archived notes' : 'no notes yet'}
               </p>
               <p className="text-[15px] font-light text-[#888888]">
-                {searchQuery ? 'Try adjusting your search.' : 'Capture your first note.'}
+                {searchQuery ? 'Try adjusting your search.' : showArchived ? 'Notes you archive will show up here.' : 'Capture your first note.'}
               </p>
             </div>
           ) : (

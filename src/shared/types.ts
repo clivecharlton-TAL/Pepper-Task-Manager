@@ -75,6 +75,17 @@ export type DomainEvent =
   | { type: 'note:created'; note: Note }
   | { type: 'note:updated'; note: Note }
   | { type: 'note:deleted'; id: string }
+  | { type: 'recording:started'; noteId: string }
+  | { type: 'recording:stopped'; noteId: string }
+  | { type: 'recording:transcribing'; noteId: string }
+  | { type: 'recording:analyzing'; noteId: string }
+  | { type: 'recording:done'; noteId: string }
+  | { type: 'recording:error'; noteId: string; message: string }
+
+export interface RecordingPermissionStatus {
+  microphone: 'granted' | 'denied' | 'not-determined'
+  screen: 'granted' | 'denied' | 'not-determined'
+}
 
 export interface VelocityPoint {
   week: string
@@ -178,6 +189,7 @@ export interface Note {
   meeting_end_time: string | null
   recording_path: string | null
   transcript: string | null
+  archived: boolean
   created_at: string
   updated_at: string
 }
@@ -203,10 +215,12 @@ export interface UpdateNoteInput {
   meeting_end_time?: string | null
   recording_path?: string | null
   transcript?: string | null
+  archived?: boolean
 }
 
 export interface NoteFilters {
   label?: string
   task_id?: string
   search?: string
+  archived?: boolean
 }

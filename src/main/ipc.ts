@@ -15,9 +15,13 @@ const execAsync = promisify(exec)
 import Anthropic from '@anthropic-ai/sdk'
 import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink, getNotes, getNote, createNote, updateNote, deleteNote } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
-import { hasApiKey, saveApiKey, getCalendarIcsUrl, saveCalendarIcsUrl, streamDraft, streamQuery, streamBriefing } from './ai'
+import { hasApiKey, saveApiKey, getCalendarIcsUrl, saveCalendarIcsUrl, streamDraft, streamQuery, streamBriefing, analyzeTranscript } from './ai'
 import { broadcast } from './events'
 import { fetchUpcomingMeetings } from './meetings'
+import { startRecording, stopRecording, checkPermissions } from './recording'
+import { transcribeAudio } from './transcription'
+import { diarizeAudio, type DiarizationSegment } from './diarization'
+import { mergeTranscriptWithSpeakers } from './transcriptMerge'
 import type { CreateTaskInput, UpdateTaskInput, TaskFilters, CreateNoteInput, UpdateNoteInput, NoteFilters } from '../shared/types'
 
 export function registerIpcHandlers(): void {
@@ -371,6 +375,61 @@ export function registerIpcHandlers(): void {
     const ok = await deleteNote(id)
     if (ok) broadcast({ type: 'note:deleted', id })
     return ok
+  })
+
+  ipcMain.handle('recording:permissions', () => checkPermissions())
+
+  ipcMain.handle('recording:start', async (_e, noteId: string) => {
+    const handle = await startRecording(noteId)
+    broadcast({ type: 'recording:started', noteId })
+    return handle
+  })
+
+  ipcMain.handle('recording:stop', async () => {
+    const { wavPath, noteId } = await stopRecording()
+    broadcast({ type: 'recording:stopped', noteId })
+
+    let note = await updateNote({ id: noteId, recording_path: wavPath })
+    if (note) broadcast({ type: 'note:updated', note })
+
+    broadcast({ type: 'recording:transcribing', noteId })
+    try {
+      const [whisperSegments, diarizationSegments] = await Promise.all([
+        transcribeAudio(wavPath),
+        diarizeAudio(wavPath).catch((err: Error) => {
+          console.error('Diarization failed, falling back to plain transcript:', err)
+          return [] as DiarizationSegment[]
+        }),
+      ])
+
+      let transcript = mergeTranscriptWithSpeakers(whisperSegments, diarizationSegments)
+      note = await updateNote({ id: noteId, transcript })
+      if (note) broadcast({ type: 'note:updated', note })
+
+      broadcast({ type: 'recording:analyzing', noteId })
+      try {
+        const analysis = await analyzeTranscript(transcript)
+        if (analysis) {
+          transcript = `${transcript}\n\n---\n\n## Group CTO Analysis\n\n${analysis}`
+          note = await updateNote({ id: noteId, transcript })
+          if (note) broadcast({ type: 'note:updated', note })
+        }
+      } catch (err) {
+        const analysisMessage = (err as Error).message
+        if (analysisMessage === 'NO_API_KEY') {
+          console.log('Skipping transcript analysis: no Anthropic API key configured')
+        } else {
+          console.error('Transcript analysis failed, leaving plain transcript:', err)
+        }
+      }
+
+      broadcast({ type: 'recording:done', noteId })
+      return { noteId, wavPath, transcript }
+    } catch (error) {
+      const message = (error as Error).message
+      broadcast({ type: 'recording:error', noteId, message })
+      throw error
+    }
   })
 
   ipcMain.handle('wallpapers:list', () => {

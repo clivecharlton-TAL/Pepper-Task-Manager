@@ -8,6 +8,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "start": "electron .",
+    "predist": "bash scripts/build-native.sh",
     "dist": "electron-vite build && electron-builder --mac --dir",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -27,6 +28,34 @@
       {
         "from": "node_modules/sql.js/dist/sql-wasm.wasm",
         "to": "sql-wasm.wasm"
+      },
+      {
+        "from": "native/pepper-audio-capture/pepper-audio-capture",
+        "to": "native/pepper-audio-capture"
+      },
+      {
+        "from": "resources/native/whisper-cli",
+        "to": "native/whisper-cli"
+      },
+      {
+        "from": "resources/native/lib",
+        "to": "native/lib"
+      },
+      {
+        "from": "resources/models/ggml-base.en.bin",
+        "to": "models/ggml-base.en.bin"
+      },
+      {
+        "from": "resources/native/sherpa-onnx-offline-speaker-diarization",
+        "to": "native/sherpa-onnx-offline-speaker-diarization"
+      },
+      {
+        "from": "resources/models/sherpa-pyannote-segmentation-3.0.onnx",
+        "to": "models/sherpa-pyannote-segmentation-3.0.onnx"
+      },
+      {
+        "from": "resources/models/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx",
+        "to": "models/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx"
       }
     ],
     "protocols": [
@@ -47,7 +76,13 @@
             "arm64"
           ]
         }
-      ]
+      ],
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Pepper Tasks uses your microphone to record meeting audio for local transcription. Audio never leaves your device.",
+        "NSScreenCaptureUsageDescription": "Pepper Tasks uses system audio capture (ScreenCaptureKit) to record meeting audio for local transcription. No video is captured."
+      }
     }
   },
   "dependencies": {

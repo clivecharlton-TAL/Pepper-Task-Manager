@@ -7,6 +7,7 @@ interface NoteStore {
   filters: NoteFilters
   activeLabel: string | null
   searchQuery: string
+  showArchived: boolean
   pendingOpenNoteId: string | null
 
   init: () => () => void
@@ -14,20 +15,24 @@ interface NoteStore {
   loadAllNotes: () => Promise<void>
   createNote: (input: CreateNoteInput) => Promise<Note>
   updateNote: (input: UpdateNoteInput) => Promise<void>
+  archiveNote: (id: string) => Promise<void>
+  unarchiveNote: (id: string) => Promise<void>
   deleteNote: (id: string) => Promise<void>
   setActiveLabel: (label: string | null) => void
   setSearchQuery: (q: string) => void
+  setShowArchived: (show: boolean) => void
   requestOpenNote: (id: string) => void
   clearPendingOpenNote: () => void
 }
 
-function applyEvent(state: Pick<NoteStore, 'notes' | 'allNotes' | 'activeLabel'>, event: DomainEvent) {
-  const { notes, allNotes, activeLabel } = state
+function applyEvent(state: Pick<NoteStore, 'notes' | 'allNotes' | 'activeLabel' | 'showArchived'>, event: DomainEvent) {
+  const { notes, allNotes, activeLabel, showArchived } = state
 
   if (event.type === 'note:created') {
     const { note } = event
     const alreadyKnown = (arr: Note[]) => arr.some(n => n.id === note.id)
-    const inFilter = !activeLabel || note.labels.some(l => l === activeLabel || l.startsWith(activeLabel + '/'))
+    const inFilter = (!activeLabel || note.labels.some(l => l === activeLabel || l.startsWith(activeLabel + '/')))
+      && note.archived === showArchived
     return {
       allNotes: alreadyKnown(allNotes) ? allNotes : [note, ...allNotes],
       notes: alreadyKnown(notes) ? notes : inFilter ? [note, ...notes] : notes
@@ -36,7 +41,8 @@ function applyEvent(state: Pick<NoteStore, 'notes' | 'allNotes' | 'activeLabel'>
 
   if (event.type === 'note:updated') {
     const { note } = event
-    const inFilter = !activeLabel || note.labels.some(l => l === activeLabel || l.startsWith(activeLabel + '/'))
+    const inFilter = (!activeLabel || note.labels.some(l => l === activeLabel || l.startsWith(activeLabel + '/')))
+      && note.archived === showArchived
     const updateOrRemove = (arr: Note[]) =>
       arr.some(n => n.id === note.id)
         ? arr.map(n => n.id === note.id ? note : n)
@@ -63,19 +69,20 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   filters: {},
   activeLabel: null,
   searchQuery: '',
+  showArchived: false,
   pendingOpenNoteId: null,
 
   init: () => {
     const unsub = window.api.on('domain-event', (raw: unknown) => {
       const event = raw as DomainEvent
-      set(s => applyEvent({ notes: s.notes, allNotes: s.allNotes, activeLabel: s.activeLabel }, event))
+      set(s => applyEvent({ notes: s.notes, allNotes: s.allNotes, activeLabel: s.activeLabel, showArchived: s.showArchived }, event))
     })
     return unsub
   },
 
   loadNotes: async () => {
-    const { filters, activeLabel } = get()
-    const f = activeLabel ? { ...filters, label: activeLabel } : filters
+    const { filters, activeLabel, showArchived } = get()
+    const f = { ...filters, ...(activeLabel ? { label: activeLabel } : {}), archived: showArchived }
     const notes = await window.api.notes.list(f)
     set({ notes })
   },
@@ -95,6 +102,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     await window.api.notes.update(input)
   },
 
+  archiveNote: async (id) => { await get().updateNote({ id, archived: true }) },
+  unarchiveNote: async (id) => { await get().updateNote({ id, archived: false }) },
+
   deleteNote: async (id) => { await window.api.notes.delete(id) },
 
   setActiveLabel: (label) => {
@@ -103,6 +113,11 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   setSearchQuery: (q) => set({ searchQuery: q }),
+
+  setShowArchived: (show) => {
+    set({ showArchived: show })
+    get().loadNotes()
+  },
 
   requestOpenNote: (id) => {
     set({ pendingOpenNoteId: id, activeLabel: null })

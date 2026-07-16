@@ -293,6 +293,12 @@ export default function TaskDetailModal({ task, onClose }: Props) {
     handleClose()
   }
 
+  const handleAddNote = async () => {
+    const note = await window.api.notes.create({ title: '', body: '', task_id: task.id })
+    setLinkedNotes(prev => [note, ...prev])
+    handleOpenNoteInNotes(note.id)
+  }
+
   const handleAttachFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return
     const errors: string[] = []
@@ -894,32 +900,39 @@ export default function TaskDetailModal({ task, onClose }: Props) {
             )}
 
             {/* Linked notes */}
-            {linkedNotes.length > 0 && (
-              <div className="flex items-start gap-4">
-                <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] w-20 pt-1 flex-shrink-0">Notes</span>
-                <div className="flex-1 flex flex-wrap gap-1.5 items-center">
-                  {linkedNotes.map(n => (
-                    <button
-                      key={n.id}
-                      onMouseDown={e => e.stopPropagation()}
-                      onClick={() => setPreviewNoteId(prev => prev === n.id ? null : n.id)}
-                      className={`font-mono text-[10px] px-2 py-0.5 rounded flex items-center gap-1 transition-colors max-w-[200px] ${
-                        previewNoteId === n.id
-                          ? 'bg-[#1a2a3a] text-[#7ab8e0] ring-1 ring-[#4a9eca]/50'
-                          : 'bg-[#1a2a3a] text-[#4a9eca] hover:text-[#7ab8e0]'
-                      }`}
-                      title={n.title || 'Untitled note'}
-                    >
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0">
-                        <path d="M2 1h4l3 3v5H2V1z" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round"/>
-                        <path d="M6 1v3h3" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round"/>
-                      </svg>
-                      <span className="truncate">{n.title || 'Untitled note'}</span>
-                    </button>
-                  ))}
-                </div>
+            <div className="flex items-start gap-4">
+              <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] w-20 pt-1 flex-shrink-0">Notes</span>
+              <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+                {linkedNotes.map(n => (
+                  <button
+                    key={n.id}
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={() => setPreviewNoteId(prev => prev === n.id ? null : n.id)}
+                    className={`font-mono text-[10px] px-2 py-0.5 rounded flex items-center gap-1 transition-colors max-w-[200px] ${
+                      previewNoteId === n.id
+                        ? 'bg-[#1a2a3a] text-[#7ab8e0] ring-1 ring-[#4a9eca]/50'
+                        : 'bg-[#1a2a3a] text-[#4a9eca] hover:text-[#7ab8e0]'
+                    }`}
+                    title={n.title || 'Untitled note'}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0">
+                      <path d="M2 1h4l3 3v5H2V1z" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round"/>
+                      <path d="M6 1v3h3" stroke="currentColor" strokeWidth="0.8" strokeLinejoin="round"/>
+                    </svg>
+                    <span className="truncate">{n.title || 'Untitled note'}</span>
+                  </button>
+                ))}
+                {linkedNotes.length === 0 && (
+                  <span className="font-mono text-[10px] text-[#3a3a3a]">No notes yet</span>
+                )}
+                <button
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={handleAddNote}
+                  className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-[#333] text-[#4a4a4a] hover:border-[#4a9eca]/50 hover:text-[#4a9eca] transition-colors"
+                  title="Add a note"
+                >+ note</button>
               </div>
-            )}
+            </div>
 
             {/* Attachments + Links */}
             <div className="flex items-start gap-4">

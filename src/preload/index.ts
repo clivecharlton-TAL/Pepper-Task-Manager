@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters } from '../shared/types'
+import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters, RecordingPermissionStatus } from '../shared/types'
 
 const api = {
   tasks: {
@@ -92,6 +92,11 @@ const api = {
     create: (input: CreateNoteInput): Promise<Note>        => ipcRenderer.invoke('notes:create', input),
     update: (input: UpdateNoteInput): Promise<Note | null> => ipcRenderer.invoke('notes:update', input),
     delete: (id: string): Promise<boolean>                 => ipcRenderer.invoke('notes:delete', id),
+  },
+  recording: {
+    permissions: (): Promise<RecordingPermissionStatus> => ipcRenderer.invoke('recording:permissions'),
+    start: (noteId: string): Promise<{ noteId: string; wavPath: string }> => ipcRenderer.invoke('recording:start', noteId),
+    stop: (): Promise<{ noteId: string; wavPath: string; transcript: string }> => ipcRenderer.invoke('recording:stop'),
   },
   wallpapers: {
     list: (): Promise<string[]> => ipcRenderer.invoke('wallpapers:list'),
