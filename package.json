@@ -79,6 +79,8 @@
       ],
       "entitlements": "resources/entitlements.mac.plist",
       "entitlementsInherit": "resources/entitlements.mac.plist",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
       "extendInfo": {
         "NSMicrophoneUsageDescription": "Pepper Tasks uses your microphone to record meeting audio for local transcription. Audio never leaves your device.",
         "NSScreenCaptureUsageDescription": "Pepper Tasks uses system audio capture (ScreenCaptureKit) to record meeting audio for local transcription. No video is captured."

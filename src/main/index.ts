@@ -2,7 +2,7 @@ import { app, BrowserWindow, Tray, Menu, type MenuItemConstructorOptions, global
 import { createServer } from 'http'
 import { join } from 'path'
 import { homedir } from 'os'
-import { syncLabelsFromDrive, createTask, getTasks } from './db'
+import { syncLabelsFromDrive, createTask, getTasks, updateTask, addLink } from './db'
 import { broadcast } from './events'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
@@ -13,23 +13,74 @@ const LOCAL_API_PORT = 47832
 
 function startLocalApi(): void {
   const server = createServer((req, res) => {
-    if (req.method !== 'POST' || req.url !== '/tasks') {
-      res.writeHead(404).end()
+    const url = req.url ?? ''
+    const patchMatch = req.method === 'PATCH' && url.match(/^\/tasks\/([^/]+)$/)
+    const linkMatch = req.method === 'POST' && url.match(/^\/tasks\/([^/]+)\/links$/)
+
+    if (req.method === 'POST' && url === '/tasks') {
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', async () => {
+        try {
+          const input = JSON.parse(body)
+          const task = await createTask(input)
+          broadcast({ type: 'task:created', task })
+          res.writeHead(201, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify(task))
+        } catch (e) {
+          res.writeHead(400).end(String(e))
+        }
+      })
       return
     }
-    let body = ''
-    req.on('data', chunk => { body += chunk })
-    req.on('end', async () => {
-      try {
-        const input = JSON.parse(body)
-        const task = await createTask(input)
-        broadcast({ type: 'task:created', task })
-        res.writeHead(201, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify(task))
-      } catch (e) {
-        res.writeHead(400).end(String(e))
-      }
-    })
+
+    if (patchMatch) {
+      const id = patchMatch[1]
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', async () => {
+        try {
+          const input = JSON.parse(body)
+          const task = await updateTask({ ...input, id })
+          if (!task) {
+            res.writeHead(404).end()
+            return
+          }
+          broadcast({ type: 'task:updated', task })
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify(task))
+        } catch (e) {
+          res.writeHead(400).end(String(e))
+        }
+      })
+      return
+    }
+
+    if (linkMatch) {
+      const taskId = linkMatch[1]
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', async () => {
+        try {
+          const { url: linkUrl, name } = JSON.parse(body)
+          const result = await addLink(taskId, linkUrl, name ?? linkUrl)
+          if ('error' in result) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify(result))
+            return
+          }
+          const task = await updateTask({ id: taskId })
+          if (task) broadcast({ type: 'task:updated', task })
+          res.writeHead(201, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify(result))
+        } catch (e) {
+          res.writeHead(400).end(String(e))
+        }
+      })
+      return
+    }
+
+    res.writeHead(404).end()
   })
   server.listen(LOCAL_API_PORT, '127.0.0.1')
 }
@@ -99,7 +150,7 @@ function createMainWindow(): BrowserWindow {
 function createQuickAddWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 480,
-    height: 560,
+    height: 700,
     frame: false,
     resizable: false,
     alwaysOnTop: true,
