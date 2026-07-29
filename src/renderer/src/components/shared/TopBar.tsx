@@ -384,7 +384,7 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
       </button>
 
       {/* Tag filter (all task views) */}
-      {tagOptions.length > 0 && (
+      {!isNotes && viewMode !== 'reports' && viewMode !== 'files' && viewMode !== 'calendar' && tagOptions.length > 0 && (
         <MultiSelectControl
           label="Tags"
           options={tagOptions}

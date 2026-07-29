@@ -1,30 +1,40 @@
 export interface TeamMember {
   name: string
   role: string
+  email: string
 }
 
-export const TEAM_MEMBERS: TeamMember[] = [
+// Emails follow firstname.lastname@takealot.com
+function emailFor(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, '.') + '@takealot.com'
+}
+
+const ROSTER: [string, string][] = [
   // CTO
-  { name: 'Clive Charlton',    role: 'CTO' },
+  ['Clive Charlton',    'CTO'],
   // CTO direct reports
-  { name: 'Filipe Teixeira',   role: 'Sr Eng Director, Group Fulfilment' },
-  { name: 'Mario De Freitas',  role: 'Eng Director, Storefront' },
-  { name: 'Jonathan Muir',     role: 'CTO, Mr D' },
-  { name: 'Pieter Rautenbach', role: 'Eng Director, Merchant' },
-  { name: 'Charles Brittz',    role: 'Eng Director, Group QA' },
-  { name: 'William Howard',    role: 'Eng Director, Platform' },
-  { name: 'Danie Nagel',       role: 'Eng Director, Data' },
-  { name: 'Axel Tidemann',     role: 'Group Head of AI' },
-  { name: 'Ryan Hendriks',     role: 'Head of Strategy & Innovation' },
-  { name: 'Renier Hugo',       role: 'Group CIO, Group IT' },
-  { name: 'Nic Torr',          role: 'Principal Engineer, SRE' },
-  { name: 'Stii Pretorius',    role: 'Principal Engineer, Group QA' },
+  ['Filipe Teixeira',   'Sr Eng Director, Group Fulfilment'],
+  ['Mario De Freitas',  'Eng Director, Storefront'],
+  ['Jonathan Muir',     'CTO, Mr D'],
+  ['Pieter Rautenbach', 'Eng Director, Merchant'],
+  ['Charles Brittz',    'Eng Director, Group QA'],
+  ['William Howard',    'Eng Director, Platform'],
+  ['Danie Nagel',       'Eng Director, Data'],
+  ['Axel Tidemann',     'Group Head of AI'],
+  ['Ryan Hendriks',     'Head of Strategy & Innovation'],
+  ['Renier Hugo',       'Group CIO, Group IT'],
+  ['Nic Torr',          'Principal Engineer, SRE'],
+  ['Stii Pretorius',    'Principal Engineer, Group QA'],
   // Principals
-  { name: 'Damon Hook',        role: 'Principal Eng, Storefront' },
-  { name: 'Cobus Carstens',    role: 'Principal Eng, Merchant' },
-  { name: 'Charles Van Wyk',   role: 'Principal SE, SRE' },
-  { name: 'Jacques Botha',     role: 'Principal SE, SRE' },
+  ['Damon Hook',        'Principal Eng, Storefront'],
+  ['Cobus Carstens',    'Principal Eng, Merchant'],
+  ['Charles Van Wyk',   'Principal SE, SRE'],
+  ['Jacques Botha',     'Principal SE, SRE'],
 ]
+
+export const TEAM_MEMBERS: TeamMember[] = ROSTER.map(([name, role]) => ({
+  name, role, email: emailFor(name),
+}))
 
 // Build a regex that matches @Name for any team member — used for display highlighting
 const escaped = TEAM_MEMBERS.map(m => m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))

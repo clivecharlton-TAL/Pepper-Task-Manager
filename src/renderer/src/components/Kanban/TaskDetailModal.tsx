@@ -11,6 +11,7 @@ import { TEAM_MEMBERS } from '../../../../shared/team'
 import { useSubTaskCountStore } from '../../stores/subTaskCountStore'
 import SubTaskDetailModal from './SubTaskDetailModal'
 import NotePreviewFlyout from '../Notes/NotePreviewFlyout'
+import QuickEmailModal from './QuickEmailModal'
 
 // ── FY quarter helpers (FY starts 1 April) ───────────────────────────────────
 
@@ -106,6 +107,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   const [newSubTaskTitle, setNewSubTaskTitle] = useState('')
   const [rowMention,      setRowMention]      = useState<{ id: string; query: string; highlight: number; rect: DOMRect | null } | null>(null)
   const [openSubTask,     setOpenSubTask]     = useState<SubTask | null>(null)
+  const [showQuickEmail,  setShowQuickEmail]  = useState(false)
   const newSubTaskRef   = useRef<HTMLInputElement>(null)
   const { setCount: setSubTaskCount } = useSubTaskCountStore()
   const labelPickerRef   = useRef<HTMLDivElement>(null)
@@ -471,6 +473,17 @@ export default function TaskDetailModal({ task, onClose }: Props) {
               onClose={() => setTitleMention(NO_MENTION)}
             />
           )}
+          <button
+            onClick={() => setShowQuickEmail(true)}
+            title="Quick email"
+            className="flex-shrink-0 flex items-center gap-1 font-mono text-[10px] px-2 py-1 rounded text-[#888888] hover:bg-[#c45d2e]/10 hover:text-[#c45d2e] transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="16" height="12" rx="2"/>
+              <path d="M2.5 5.5l7.5 6 7.5-6"/>
+            </svg>
+            Email
+          </button>
           <button
             onClick={handleClose}
             className="flex-shrink-0 text-[#555555] hover:text-[#f0f0f0] transition-colors text-[18px] leading-none"
@@ -1193,6 +1206,13 @@ export default function TaskDetailModal({ task, onClose }: Props) {
             setSubTasks(prev => prev.map(s => s.id === updated.id ? updated : s))
             setOpenSubTask(updated)
           }}
+        />
+      )}
+
+      {showQuickEmail && (
+        <QuickEmailModal
+          task={{ ...task, title, notes, assigned, due_date: dueDate || null }}
+          onClose={() => setShowQuickEmail(false)}
         />
       )}
     </div>

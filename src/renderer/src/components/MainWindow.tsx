@@ -107,6 +107,13 @@ export default function MainWindow() {
       return
     }
 
+    // Calendar: dropped on a day cell — set the task's due date
+    if (overId.startsWith('date:')) {
+      const dateStr = overId.slice('date:'.length)
+      updateTask({ id: taskId, due_date: dateStr })
+      return
+    }
+
     // Dropped on a sub-task zone — convert task into a sub-task of the target
     if (overId.startsWith('subtask-of-')) {
       const parentId = overId.slice('subtask-of-'.length)

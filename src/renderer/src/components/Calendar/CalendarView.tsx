@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addWeeks, addMonths, format, isToday, isSameMonth,
@@ -8,6 +10,8 @@ import type { Task, TaskPriority, LabelNode } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
 import TaskDetailModal from '../Kanban/TaskDetailModal'
 import { matchesHiddenTags } from '../../utils/listHelpers'
+
+const DATE_DROP_PREFIX = 'date:'
 
 type SubView = 'month' | 'week' | 'agenda'
 
@@ -39,11 +43,17 @@ function getTasksForDate(tasks: Task[], dateStr: string): Task[] {
 function TaskChip({ task, onOpen, small = true }: { task: Task; onOpen: (t: Task) => void; small?: boolean }) {
   const isDone = task.status === 'done'
   const { bg, border } = PRIORITY_CHIP[task.priority]
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
+  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.35 : 1 }
+
   return (
     <button
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       onClick={e => { e.stopPropagation(); onOpen(task) }}
-      className={`w-full text-left rounded flex items-center gap-1 hover:opacity-75 transition-opacity ${small ? 'px-1.5 py-[3px]' : 'px-2 py-1.5'}`}
-      style={{ backgroundColor: isDone ? 'rgba(255,255,255,0.03)' : bg, borderLeft: `2px solid ${isDone ? '#333' : border}` }}
+      className={`w-full text-left rounded flex items-center gap-1 hover:opacity-75 transition-opacity cursor-grab active:cursor-grabbing ${small ? 'px-1.5 py-[3px]' : 'px-2 py-1.5'}`}
+      style={{ ...style, backgroundColor: isDone ? 'rgba(255,255,255,0.03)' : bg, borderLeft: `2px solid ${isDone ? '#333' : border}` }}
     >
       <span className={`flex-1 font-mono truncate leading-none ${small ? 'text-[10px]' : 'text-[11px]'} ${isDone ? 'line-through text-[#3a3a3a]' : 'text-[#cccccc]'}`}>
         {task.title}
@@ -62,9 +72,15 @@ function DayCell({ date, dateStr, tasks, inMonth, onOpen }: {
   const today = isToday(date)
   const visible = tasks.slice(0, MAX_CHIPS)
   const overflow = tasks.length - MAX_CHIPS
+  const { setNodeRef, isOver } = useDroppable({ id: `${DATE_DROP_PREFIX}${dateStr}` })
 
   return (
-    <div className={`border-r border-b border-[#222222] flex flex-col p-1.5 gap-1 ${today ? 'bg-[#c45d2e]/[0.06]' : ''}`}>
+    <div
+      ref={setNodeRef}
+      className={`border-r border-b border-[#222222] flex flex-col p-1.5 gap-1 transition-colors ${
+        isOver ? 'bg-[#c45d2e]/[0.12]' : today ? 'bg-[#c45d2e]/[0.06]' : ''
+      }`}
+    >
       {/* Day number */}
       <div className="flex justify-end mb-0.5">
         <span className={`font-mono text-[11px] flex items-center justify-center w-[18px] h-[18px] rounded-full leading-none flex-shrink-0 ${
@@ -131,6 +147,25 @@ function MonthView({ tasks, currentDate, onOpen }: { tasks: Task[]; currentDate:
   )
 }
 
+// ── Week: single day column ───────────────────────────────────────────────────
+
+function WeekDayColumn({ dateStr, tasks, today, onOpen }: {
+  dateStr: string; tasks: Task[]; today: boolean; onOpen: (t: Task) => void
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `${DATE_DROP_PREFIX}${dateStr}` })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`border-r border-b border-[#222222] p-2 flex flex-col gap-1 min-h-[200px] transition-colors ${
+        isOver ? 'bg-[#c45d2e]/[0.12]' : today ? 'bg-[#c45d2e]/[0.04]' : ''
+      }`}
+    >
+      {tasks.map(t => <TaskChip key={t.id} task={t} onOpen={onOpen} small={false} />)}
+    </div>
+  )
+}
+
 // ── Week view ──────────────────────────────────────────────────────────────────
 
 function WeekView({ tasks, currentDate, onOpen }: { tasks: Task[]; currentDate: Date; onOpen: (t: Task) => void }) {
@@ -159,15 +194,14 @@ function WeekView({ tasks, currentDate, onOpen }: { tasks: Task[]; currentDate: 
       <div className="grid grid-cols-7 flex-1 overflow-y-auto">
         {days.map(day => {
           const dateStr = format(day, 'yyyy-MM-dd')
-          const dayTasks = getTasksForDate(tasks, dateStr)
-          const today = isToday(day)
           return (
-            <div key={dateStr} className={`border-r border-b border-[#222222] p-2 flex flex-col gap-1 min-h-[200px] ${today ? 'bg-[#c45d2e]/[0.04]' : ''}`}>
-              {dayTasks.length === 0
-                ? null
-                : dayTasks.map(t => <TaskChip key={t.id} task={t} onOpen={onOpen} small={false} />)
-              }
-            </div>
+            <WeekDayColumn
+              key={dateStr}
+              dateStr={dateStr}
+              tasks={getTasksForDate(tasks, dateStr)}
+              today={isToday(day)}
+              onOpen={onOpen}
+            />
           )
         })}
       </div>
@@ -291,6 +325,28 @@ function AgendaView({ tasks, onOpen }: { tasks: Task[]; onOpen: (t: Task) => voi
 
 // ── Unscheduled sidebar ───────────────────────────────────────────────────────
 
+function UnscheduledRow({ task, onOpen }: { task: Task; onOpen: (t: Task) => void }) {
+  const { border } = PRIORITY_CHIP[task.priority]
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
+  const style = { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.35 : 1 }
+
+  return (
+    <button
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => onOpen(task)}
+      className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#252525] transition-colors group cursor-grab active:cursor-grabbing"
+    >
+      <div className="w-0.5 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: border }} />
+      <span className="font-mono text-[10px] text-[#666666] truncate flex-1 group-hover:text-[#c0c0c0] transition-colors leading-snug">
+        {task.title}
+      </span>
+    </button>
+  )
+}
+
 function UnscheduledSidebar({ tasks, onOpen }: { tasks: Task[]; onOpen: (t: Task) => void }) {
   return (
     <div className="w-52 flex-shrink-0 border-l border-[#222222] flex flex-col overflow-hidden">
@@ -299,21 +355,7 @@ function UnscheduledSidebar({ tasks, onOpen }: { tasks: Task[]; onOpen: (t: Task
         <span className="font-mono text-[9px] text-[#333333]">{tasks.length}</span>
       </div>
       <div className="flex-1 overflow-y-auto py-1.5 px-1.5 space-y-0.5">
-        {tasks.map(task => {
-          const { border } = PRIORITY_CHIP[task.priority]
-          return (
-            <button
-              key={task.id}
-              onClick={() => onOpen(task)}
-              className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#252525] transition-colors group"
-            >
-              <div className="w-0.5 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: border }} />
-              <span className="font-mono text-[10px] text-[#666666] truncate flex-1 group-hover:text-[#c0c0c0] transition-colors leading-snug">
-                {task.title}
-              </span>
-            </button>
-          )
-        })}
+        {tasks.map(task => <UnscheduledRow key={task.id} task={task} onOpen={onOpen} />)}
       </div>
     </div>
   )
