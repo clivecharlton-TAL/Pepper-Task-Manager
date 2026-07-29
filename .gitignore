@@ -22,3 +22,9 @@ npm-debug.log*
 # Env files
 .env
 .env.*
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Local scripts with secrets — never commit
+get-refresh-token.js
