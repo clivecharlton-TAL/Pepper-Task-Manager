@@ -115,6 +115,7 @@ const DUE_META: { id: DueFilter; label: string; colour: string; icon: ReactNode 
   { id: 'overdue',   label: 'Overdue',   colour: '#FC2847', icon: <IconClock /> },
   { id: 'today',     label: 'Today',     colour: '#FF9F0A', icon: <IconCalendarDay /> },
   { id: 'this_week', label: 'This Week', colour: '#30D158', icon: <IconCalendarWeek /> },
+  { id: 'next_week', label: 'Next Week', colour: '#4a9eca', icon: <IconCalendarWeek /> },
 ]
 
 function DroppableTag({ label, count, isActive, onActivate }: {
