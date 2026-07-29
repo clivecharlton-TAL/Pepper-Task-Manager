@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useTaskStore } from '../../stores/taskStore'
 import { useNoteStore } from '../../stores/noteStore'
 import type { Note } from '../../../../shared/types'
@@ -11,6 +11,8 @@ export default function NotesView() {
   const allTasks = useTaskStore(s => s.allTasks)
   const { notes, allNotes, searchQuery, loadNotes, createNote, deleteNote, showArchived, setShowArchived, pendingOpenNoteId, clearPendingOpenNote } = useNoteStore()
   const [selected, setSelected] = useState<Note | null>(null)
+  const flushers = useRef<Map<string, () => void>>(new Map())
+  const registerFlush = (noteId: string, flush: () => void) => { flushers.current.set(noteId, flush) }
 
   useEffect(() => { loadNotes() }, [])
 
@@ -20,10 +22,14 @@ export default function NotesView() {
   // Discards the currently open note if it was never touched, then opens the next one.
   // Used for both list-item clicks and cross-navigation, so a blank note left behind
   // doesn't linger as junk no matter how the editor pane changes what it shows.
+  // Flushes any debounced-but-unsaved edits first, so a note isn't judged "blank"
+  // (and deleted) just because its last keystroke hadn't been saved yet.
   const selectNote = (next: Note | null) => {
     setSelected(prev => {
       if (prev && prev.id !== next?.id) {
-        const fresh = allNotes.find(n => n.id === prev.id) ?? prev
+        flushers.current.get(prev.id)?.()
+        flushers.current.delete(prev.id)
+        const fresh = useNoteStore.getState().allNotes.find(n => n.id === prev.id) ?? prev
         if (isBlank(fresh)) deleteNote(fresh.id)
       }
       return next
@@ -122,7 +128,7 @@ export default function NotesView() {
       </div>
 
       {selected && (
-        <NoteEditor note={selected} onClose={() => selectNote(null)} />
+        <NoteEditor note={selected} onClose={() => selectNote(null)} registerFlush={registerFlush} />
       )}
     </div>
   )

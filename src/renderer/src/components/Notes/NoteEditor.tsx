@@ -20,9 +20,10 @@ function getMarkdown(editor: Editor): string {
 interface Props {
   note: Note
   onClose: () => void
+  registerFlush?: (noteId: string, flush: () => void) => void
 }
 
-export default function NoteEditor({ note, onClose }: Props) {
+export default function NoteEditor({ note, onClose, registerFlush }: Props) {
   const labels = useTaskStore(s => s.labels)
   const allTasks = useTaskStore(s => s.allTasks)
   const updateNote = useNoteStore(s => s.updateNote)
@@ -79,12 +80,26 @@ export default function NoteEditor({ note, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.id])
 
+  const pendingPatch = useRef<Partial<Pick<Note, 'title' | 'body'>>>({})
+
   const scheduleSave = (patch: Partial<Pick<Note, 'title' | 'body'>>) => {
+    pendingPatch.current = { ...pendingPatch.current, ...patch }
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      updateNote({ id: note.id, ...patch })
-    }, 400)
+    saveTimer.current = setTimeout(flushSave, 400)
   }
+
+  const flushSave = () => {
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null }
+    if (Object.keys(pendingPatch.current).length === 0) return
+    const patch = pendingPatch.current
+    pendingPatch.current = {}
+    updateNote({ id: note.id, ...patch })
+  }
+
+  useEffect(() => {
+    registerFlush?.(note.id, flushSave)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note.id, registerFlush])
 
   const linkMeeting = (meeting: Meeting) => {
     updateNote({
