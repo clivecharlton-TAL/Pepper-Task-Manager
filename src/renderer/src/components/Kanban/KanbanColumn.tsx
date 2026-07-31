@@ -60,10 +60,12 @@ export default function KanbanColumn({
     )
   }
 
+  // flex-1 with no max width: expanded columns divide whatever space the
+  // collapsed strips leave, so collapsing actually widens what remains.
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col flex-1 min-w-[220px] max-w-[420px] rounded transition-colors ${
+      className={`flex flex-col flex-1 min-w-[220px] rounded transition-colors ${
         isOver ? 'bg-[#2a2a2a]' : ''
       }`}
     >
