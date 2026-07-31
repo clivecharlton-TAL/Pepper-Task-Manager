@@ -174,7 +174,7 @@ export async function streamQuery(
   // Loop until stop_reason is 'end_turn' (handles multi-step tool use)
   while (true) {
     const stream = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-5',
       max_tokens: 4096,
       stream: true,
       system: QUERY_SYSTEM_PROMPT(tasksJson),
@@ -296,7 +296,7 @@ export async function streamDraft(
 
   const client = new Anthropic({ apiKey })
   const stream = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5',
     max_tokens: 2048,
     stream: true,
     messages: [{ role: 'user', content: DRAFT_PROMPT(title, attachments, links) }]
@@ -364,7 +364,7 @@ ${tasksJson}
 Please generate the briefing.`
 
   const stream = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5',
     max_tokens: 2048,
     stream: true,
     system: BRIEFING_SYSTEM_PROMPT,
@@ -410,7 +410,7 @@ export async function analyzeTranscript(transcript: string): Promise<string> {
   const client = new Anthropic({ apiKey })
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-5',
     max_tokens: 2048,
     system: CTO_ANALYSIS_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: `Meeting transcript:\n\n${transcript}` }]
