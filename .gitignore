@@ -28,3 +28,6 @@ npm-debug.log*
 
 # Local scripts with secrets — never commit
 get-refresh-token.js
+
+# Local dev tooling (Playwright driver, scratch scripts)
+.working/
