@@ -16,9 +16,13 @@ interface Props {
   label: string
   tasks: Task[]
   onOpenTask: (task: Task) => void
+  isCollapsed: boolean
+  onToggleCollapsed: () => void
 }
 
-export default function KanbanColumn({ id, tasks, onOpenTask }: Props) {
+export default function KanbanColumn({
+  id, tasks, onOpenTask, isCollapsed, onToggleCollapsed
+}: Props) {
   const { setNodeRef, isOver } = useDroppable({ id })
   const meta = COLUMN_META[id]
   const [doneExpanded, setDoneExpanded] = useState(false)
@@ -26,19 +30,54 @@ export default function KanbanColumn({ id, tasks, onOpenTask }: Props) {
   const isDone = id === 'done'
   const visibleTasks = isDone && !doneExpanded ? [] : tasks
 
+  // Collapsed: a narrow vertical strip that still accepts drops, so a card can
+  // be dragged into a column that is out of focus without expanding it first.
+  if (isCollapsed) {
+    return (
+      <div
+        ref={setNodeRef}
+        onClick={onToggleCollapsed}
+        title={`Expand ${meta.label}`}
+        className={`flex flex-col items-center w-10 flex-shrink-0 rounded cursor-pointer border transition-colors py-3 gap-3 ${
+          isOver ? 'bg-[#2a2a2a] border-transparent' : 'border-[#2e2e2e] hover:bg-[#252525]'
+        }`}
+        style={isOver ? { borderColor: meta.colour + '60' } : {}}
+      >
+        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: meta.colour }} />
+        <span
+          className="font-mono text-[10px] px-1 py-0.5 rounded flex-shrink-0"
+          style={{ backgroundColor: meta.colour + '22', color: meta.colour }}
+        >
+          {tasks.length}
+        </span>
+        <span
+          className="font-mono text-[10px] tracking-widest uppercase whitespace-nowrap"
+          style={{ color: meta.colour, writingMode: 'vertical-rl' }}
+        >
+          {meta.label}
+        </span>
+      </div>
+    )
+  }
+
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col w-72 flex-shrink-0 rounded transition-colors ${
+      className={`flex flex-col flex-1 min-w-[220px] max-w-[420px] rounded transition-colors ${
         isOver ? 'bg-[#2a2a2a]' : ''
       }`}
     >
-      {/* Column header */}
+      {/* Column header — the label toggles collapse */}
       <div className="flex items-center gap-2.5 px-1 pb-3 flex-shrink-0">
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: meta.colour }} />
-        <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: meta.colour }}>
+        <button
+          onClick={onToggleCollapsed}
+          title={`Collapse ${meta.label}`}
+          className="font-mono text-[10px] tracking-widest uppercase hover:opacity-70 transition-opacity"
+          style={{ color: meta.colour }}
+        >
           {meta.label}
-        </span>
+        </button>
         <span
           className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded"
           style={{ backgroundColor: meta.colour + '22', color: meta.colour }}

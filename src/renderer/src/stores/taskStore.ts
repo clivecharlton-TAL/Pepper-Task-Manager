@@ -22,6 +22,8 @@ interface TaskStore {
   semanticSearching: boolean
   statusCollapsed: boolean
   priorityCollapsed: boolean
+  /** Kanban columns collapsed to a narrow strip, for focusing on the rest. */
+  collapsedColumns: TaskStatus[]
   searchQuery: string
   viewMode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar' | 'timeline' | 'notes'
   lastTaskViewMode: 'kanban' | 'list' | 'timeline'
@@ -45,6 +47,8 @@ interface TaskStore {
   setAssignedToMe: (on: boolean) => void
   toggleStatusCollapsed: () => void
   togglePriorityCollapsed: () => void
+  toggleColumnCollapsed: (status: TaskStatus) => void
+  expandAllColumns: () => void
   setSearchQuery: (q: string) => void
   setViewMode: (mode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar' | 'timeline' | 'notes') => void
   navigateToLabel: (labelId: string) => void
@@ -108,6 +112,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   // Status/Priority panels default to collapsed; the last state is remembered.
   statusCollapsed: loadPref('sidebar.statusCollapsed', true),
   priorityCollapsed: loadPref('sidebar.priorityCollapsed', true),
+  collapsedColumns: loadPref<TaskStatus[]>('kanban.collapsedColumns', []),
   searchQuery: '',
   viewMode: 'kanban',
   lastTaskViewMode: 'kanban',
@@ -187,6 +192,19 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const priorityCollapsed = !s.priorityCollapsed
     savePref('sidebar.priorityCollapsed', priorityCollapsed)
     return { priorityCollapsed }
+  }),
+
+  toggleColumnCollapsed: (status) => set(s => {
+    const collapsedColumns = s.collapsedColumns.includes(status)
+      ? s.collapsedColumns.filter(c => c !== status)
+      : [...s.collapsedColumns, status]
+    savePref('kanban.collapsedColumns', collapsedColumns)
+    return { collapsedColumns }
+  }),
+
+  expandAllColumns: () => set(() => {
+    savePref('kanban.collapsedColumns', [])
+    return { collapsedColumns: [] }
   }),
 
   setSearchQuery: (q) => {
