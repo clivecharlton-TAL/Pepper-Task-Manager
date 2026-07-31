@@ -17,6 +17,9 @@ interface TaskStore {
   activePriority: TaskPriority | null
   activeDue: DueFilter | null
   assignedToMe: boolean
+  /** Task ids semantically related to searchQuery, best first. */
+  semanticTaskIds: string[]
+  semanticSearching: boolean
   statusCollapsed: boolean
   priorityCollapsed: boolean
   searchQuery: string
@@ -88,6 +91,8 @@ function applyEvent(state: Pick<TaskStore, 'tasks' | 'allTasks' | 'activeLabel'>
   return {}
 }
 
+let semanticTimer: ReturnType<typeof setTimeout> | null = null
+
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
   allTasks: [],
@@ -98,6 +103,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   activePriority: null,
   activeDue: null,
   assignedToMe: false,
+  semanticTaskIds: [],
+  semanticSearching: false,
   // Status/Priority panels default to collapsed; the last state is remembered.
   statusCollapsed: loadPref('sidebar.statusCollapsed', true),
   priorityCollapsed: loadPref('sidebar.priorityCollapsed', true),
@@ -182,7 +189,35 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     return { priorityCollapsed }
   }),
 
-  setSearchQuery: (q) => set({ searchQuery: q }),
+  setSearchQuery: (q) => {
+    set({ searchQuery: q })
+
+    // Keyword filtering stays synchronous and instant; the semantic pass is
+    // debounced so typing does not queue an embedding per keystroke.
+    if (semanticTimer !== null) clearTimeout(semanticTimer)
+
+    const query = q.trim()
+    if (query.length < 3) {
+      set({ semanticTaskIds: [], semanticSearching: false })
+      return
+    }
+
+    set({ semanticSearching: true })
+    semanticTimer = setTimeout(async () => {
+      try {
+        const hits = await window.api.search.semantic(query)
+        // Ignore results for a query the user has already moved on from.
+        if (get().searchQuery.trim() !== query) return
+        set({
+          semanticTaskIds: hits.filter(h => h.kind === 'task').map(h => h.id),
+          semanticSearching: false,
+        })
+      } catch (e) {
+        console.error('Semantic search failed:', e)
+        set({ semanticTaskIds: [], semanticSearching: false })
+      }
+    }, 250)
+  },
   setViewMode: (mode) => set(s => ({
     viewMode: mode,
     lastTaskViewMode: (mode === 'kanban' || mode === 'list' || mode === 'timeline') ? mode : s.lastTaskViewMode,

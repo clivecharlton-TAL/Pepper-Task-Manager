@@ -17,6 +17,7 @@ import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, sy
 import { listFiles, openFile, revealFile, createFolder } from './files'
 import { hasApiKey, saveApiKey, getCalendarIcsUrl, saveCalendarIcsUrl, streamDraft, streamQuery, streamBriefing, analyzeTranscript } from './ai'
 import { callMcpTool } from './mcp'
+import { semanticSearch, buildIndex } from './semanticSearch'
 import { broadcast } from './events'
 import { fetchUpcomingMeetings } from './meetings'
 import { startRecording, stopRecording, checkPermissions } from './recording'
@@ -364,6 +365,9 @@ export function registerIpcHandlers(): void {
     }
     return result
   })
+
+  ipcMain.handle('search:semantic', (_e, query: string) => semanticSearch(query))
+  ipcMain.handle('search:reindex',  () => buildIndex())
 
   ipcMain.handle('notes:list',   (_e, filters?: NoteFilters) => getNotes(filters))
   ipcMain.handle('notes:get',    (_e, id: string) => getNote(id))

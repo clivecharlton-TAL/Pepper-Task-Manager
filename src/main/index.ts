@@ -7,6 +7,7 @@ import { broadcast } from './events'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
 import { initMcpServers, shutdownMcpServers } from './mcp'
+import { warmSemanticSearch } from './semanticSearch'
 import { matchesDue } from '../shared/dateFilters'
 import { PRIORITY_RANK, PRIORITY_GLYPH } from '../shared/taskPriority'
 
@@ -338,6 +339,11 @@ app.whenReady().then(async () => {
   // child process over stdio, so this must not block window creation; the AI
   // chat simply sees no MCP tools until the handshakes finish.
   initMcpServers().catch(e => console.error('MCP init failed:', e))
+
+  // Load the embedding model and index any new/changed items in the
+  // background. Only content whose hash changed is re-embedded, so this is
+  // cheap after the first run.
+  warmSemanticSearch()
 
   // Silently pick up any new Drive folders added since last launch
   const drivePath = join(homedir(), 'Library/CloudStorage/GoogleDrive/My Drive')

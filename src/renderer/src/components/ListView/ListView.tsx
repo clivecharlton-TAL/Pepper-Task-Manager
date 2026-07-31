@@ -4,7 +4,7 @@ import type { Task } from '../../../../shared/types'
 import ListRow from './ListRow'
 import TaskDetailModal from '../Kanban/TaskDetailModal'
 import ZeroStateView from '../shared/ZeroStateView'
-import { matchesDue, flattenLabels, matchesSearch, matchesHiddenTags, matchesAssignedToMe, applySortFn, computeGroups, type Group } from '../../utils/listHelpers'
+import { matchesDue, flattenLabels, matchesSearchSemantic, matchesHiddenTags, matchesAssignedToMe, applySortFn, computeGroups, type Group } from '../../utils/listHelpers'
 
 function GroupHeader({ header, color, isCollapsed, onToggle }: { header: string; color?: string; isCollapsed: boolean; onToggle: () => void }) {
   return (
@@ -26,7 +26,7 @@ function GroupHeader({ header, color, isCollapsed, onToggle }: { header: string;
 }
 
 export default function ListView() {
-  const { tasks, labels, searchQuery, activeStatus, activePriority, activeDue, assignedToMe, listSort, listGroup, hiddenStatuses, hiddenTags } = useTaskStore()
+  const { tasks, labels, searchQuery, semanticTaskIds, activeStatus, activePriority, activeDue, assignedToMe, listSort, listGroup, hiddenStatuses, hiddenTags } = useTaskStore()
   const [detailTask, setDetailTask] = useState<Task | null>(null)
   const [showDone, setShowDone] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
@@ -49,9 +49,9 @@ export default function ListView() {
     if (activePriority && t.priority !== activePriority) return false
     if (activeDue      && !matchesDue(t, activeDue))     return false
     if (assignedToMe   && !matchesAssignedToMe(t))       return false
-    if (searchQuery    && !matchesSearch(t, searchQuery, flatLabels)) return false
+    if (searchQuery    && !matchesSearchSemantic(t, searchQuery, flatLabels, semanticTaskIds)) return false
     return true
-  }), [tasks, activePriority, activeDue, assignedToMe, searchQuery, flatLabels, hiddenStatuses, hiddenTags])
+  }), [tasks, activePriority, activeDue, assignedToMe, searchQuery, semanticTaskIds, flatLabels, hiddenStatuses, hiddenTags])
 
   // --- grouped mode ---
   const groups = useMemo<Group[] | null>(() => {

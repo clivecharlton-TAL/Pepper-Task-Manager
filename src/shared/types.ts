@@ -53,6 +53,12 @@ export interface UpdateTaskInput {
   linked_email_subject?: string | null
 }
 
+export interface SemanticHit {
+  id: string
+  kind: 'task' | 'note'
+  score: number
+}
+
 export interface TaskFilters {
   label?: string
   status?: TaskStatus

@@ -9,7 +9,7 @@ import {
 import type { Task, TaskPriority, LabelNode } from '../../../../shared/types'
 import { useTaskStore } from '../../stores/taskStore'
 import TaskDetailModal from '../Kanban/TaskDetailModal'
-import { matchesHiddenTags, matchesAssignedToMe } from '../../utils/listHelpers'
+import { matchesHiddenTags, matchesAssignedToMe, matchesSearchSemantic } from '../../utils/listHelpers'
 
 const DATE_DROP_PREFIX = 'date:'
 
@@ -444,7 +444,7 @@ function CalendarHeader({ subView, onSubView, currentDate, onNavigate }: {
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export default function CalendarView() {
-  const { tasks, labels, activePriority, activeStatus, assignedToMe, searchQuery, hiddenTags } = useTaskStore()
+  const { tasks, labels, activePriority, activeStatus, assignedToMe, searchQuery, semanticTaskIds, hiddenTags } = useTaskStore()
   const [subView, setSubView] = useState<SubView>('month')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [detailTask, setDetailTask] = useState<Task | null>(null)
@@ -456,17 +456,9 @@ export default function CalendarView() {
     if (activeStatus  && t.status   !== activeStatus)   return false
     if (assignedToMe  && !matchesAssignedToMe(t))       return false
     if (matchesHiddenTags(t, hiddenTags)) return false
-    if (searchQuery) {
-      const s = searchQuery.toLowerCase()
-      if (!t.title.toLowerCase().includes(s) &&
-          !t.notes?.toLowerCase().includes(s) &&
-          !t.labels.some(id => id.toLowerCase().includes(s)) &&
-          !t.labels.some(id => flatLabels.find(l => l.id === id)?.name.toLowerCase().includes(s))) {
-        return false
-      }
-    }
+    if (searchQuery && !matchesSearchSemantic(t, searchQuery, flatLabels, semanticTaskIds)) return false
     return true
-  }), [tasks, activePriority, activeStatus, assignedToMe, searchQuery, flatLabels, hiddenTags])
+  }), [tasks, activePriority, activeStatus, assignedToMe, searchQuery, semanticTaskIds, flatLabels, hiddenTags])
 
   const scheduledTasks   = useMemo(() => filtered.filter(t => t.due_date), [filtered])
   const unscheduledTasks = useMemo(() => filtered.filter(t => !t.due_date && t.status !== 'done'), [filtered])

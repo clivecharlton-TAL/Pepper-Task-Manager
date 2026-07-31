@@ -178,6 +178,7 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
   const {
     activeLabel, activeStatus, activePriority, activeDue, assignedToMe,
     searchQuery, setSearchQuery,
+    semanticTaskIds, semanticSearching,
     viewMode, setViewMode,
     listSort, setListSort,
     listGroup, setListGroup,
@@ -418,6 +419,17 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
           className="bg-transparent font-mono text-[12px] text-[#f0f0f0] placeholder-[#3a3a3a] w-48 focus:outline-none"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         />
+        {!isNotes && isActive && (semanticSearching || semanticTaskIds.length > 0) && (
+          <span
+            title={semanticSearching ? 'Finding related items…' : `${semanticTaskIds.length} related by meaning`}
+            className={`font-mono text-[9px] px-1 py-0.5 rounded flex-shrink-0 transition-opacity ${
+              semanticSearching ? 'opacity-40' : 'opacity-100'
+            }`}
+            style={{ backgroundColor: '#5AC8FA22', color: '#5AC8FA' }}
+          >
+            {semanticSearching ? '~' : `~${semanticTaskIds.length}`}
+          </span>
+        )}
         {isActive && (
           <button
             onClick={clear}

@@ -23,6 +23,20 @@ export function matchesSearch(task: Task, q: string, flat: LabelNode[]): boolean
   return false
 }
 
+/**
+ * Keyword match, widened by semantic hits.
+ *
+ * Exact matching stays authoritative — it handles names, ticket ids and codes
+ * that embeddings score poorly. Semantic ids only add results that literal
+ * matching would have missed.
+ */
+export function matchesSearchSemantic(
+  task: Task, q: string, flat: LabelNode[], semanticIds: string[]
+): boolean {
+  if (matchesSearch(task, q, flat)) return true
+  return semanticIds.includes(task.id)
+}
+
 export function matchesAssignedToMe(task: Task): boolean {
   return (task.assigned ?? []).some(isMe)
 }

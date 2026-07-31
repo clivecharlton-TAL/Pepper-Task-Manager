@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters, RecordingPermissionStatus } from '../shared/types'
+import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters, RecordingPermissionStatus, SemanticHit } from '../shared/types'
 
 const api = {
   tasks: {
@@ -85,6 +85,10 @@ const api = {
   },
   meetings: {
     getUpcoming: (dateString?: string): Promise<any> => ipcRenderer.invoke('meetings:upcoming', dateString),
+  },
+  search: {
+    semantic: (query: string): Promise<SemanticHit[]> => ipcRenderer.invoke('search:semantic', query),
+    reindex:  (): Promise<{ indexed: number; reused: number }> => ipcRenderer.invoke('search:reindex'),
   },
   notes: {
     list:   (filters?: NoteFilters): Promise<Note[]>       => ipcRenderer.invoke('notes:list', filters),
