@@ -92,6 +92,24 @@ export function getMcpTools(): Anthropic.Tool[] {
   return allTools
 }
 
+/**
+ * Close every connected server. Each transport owns a spawned child process,
+ * so this must run on quit or those processes are orphaned.
+ */
+export async function shutdownMcpServers(): Promise<void> {
+  await Promise.all(
+    Array.from(clients.entries()).map(async ([serverName, client]) => {
+      try {
+        await client.close()
+      } catch (e) {
+        console.error(`Failed to close MCP server ${serverName}:`, e)
+      }
+    })
+  )
+  clients.clear()
+  toolCache.clear()
+}
+
 export async function callMcpTool(name: string, input: Record<string, unknown>): Promise<string> {
   // Non-greedy server segment so the first '__' delimits it; the tool name may
   // itself contain '__'. A character class like [^__]+ would exclude single

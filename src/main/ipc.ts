@@ -16,6 +16,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink, getNotes, getNote, createNote, updateNote, deleteNote } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
 import { hasApiKey, saveApiKey, getCalendarIcsUrl, saveCalendarIcsUrl, streamDraft, streamQuery, streamBriefing, analyzeTranscript } from './ai'
+import { callMcpTool } from './mcp'
 import { broadcast } from './events'
 import { fetchUpcomingMeetings } from './meetings'
 import { startRecording, stopRecording, checkPermissions } from './recording'
@@ -267,6 +268,11 @@ export function registerIpcHandlers(): void {
             return { success: true, subtask }
           }
           default:
+            // MCP tool names are namespaced mcp__<server>__<tool>; anything
+            // else is genuinely unknown.
+            if (toolName.startsWith('mcp__')) {
+              return { success: true, result: await callMcpTool(toolName, input) }
+            }
             return { error: `Unknown tool: ${toolName}` }
         }
       }

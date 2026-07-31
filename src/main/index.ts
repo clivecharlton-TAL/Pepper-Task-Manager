@@ -6,6 +6,7 @@ import { syncLabelsFromDrive, createTask, getTasks, updateTask, addLink } from '
 import { broadcast } from './events'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
+import { initMcpServers, shutdownMcpServers } from './mcp'
 import { matchesDue } from '../shared/dateFilters'
 import { PRIORITY_RANK, PRIORITY_GLYPH } from '../shared/taskPriority'
 
@@ -333,6 +334,11 @@ app.whenReady().then(async () => {
     pendingUrl = null
   }
 
+  // Connect to any configured MCP servers in the background. Each one spawns a
+  // child process over stdio, so this must not block window creation; the AI
+  // chat simply sees no MCP tools until the handshakes finish.
+  initMcpServers().catch(e => console.error('MCP init failed:', e))
+
   // Silently pick up any new Drive folders added since last launch
   const drivePath = join(homedir(), 'Library/CloudStorage/GoogleDrive/My Drive')
   syncLabelsFromDrive(drivePath).then(({ added }) => {
@@ -355,8 +361,19 @@ app.whenReady().then(async () => {
   })
 })
 
-app.on('will-quit', () => {
+let mcpShutdownDone = false
+
+app.on('will-quit', (event) => {
   globalShortcut.unregisterAll()
+
+  // Closing the stdio transports is async, so hold the quit for one pass and
+  // re-issue it once the child processes are gone.
+  if (!mcpShutdownDone) {
+    event.preventDefault()
+    shutdownMcpServers()
+      .catch(e => console.error('MCP shutdown failed:', e))
+      .finally(() => { mcpShutdownDone = true; app.quit() })
+  }
 })
 
 // Keep app alive when all windows closed (menu bar app behaviour)

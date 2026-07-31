@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { app } from 'electron'
+import { getMcpTools } from './mcp'
 
 const CONFIG_PATH = join(app.getPath('userData'), 'config.json')
 
@@ -173,12 +174,16 @@ export async function streamQuery(
 
   // Loop until stop_reason is 'end_turn' (handles multi-step tool use)
   while (true) {
+    // Recomputed each pass so servers that finish connecting mid-conversation
+    // are picked up without needing a restart.
+    const tools = [...TASK_TOOLS, ...getMcpTools()]
+
     const stream = await client.messages.create({
       model: 'claude-sonnet-5',
       max_tokens: 4096,
       stream: true,
       system: QUERY_SYSTEM_PROMPT(tasksJson),
-      tools: TASK_TOOLS,
+      tools,
       messages: apiMessages,
     })
 
@@ -276,8 +281,11 @@ function describeAction(toolName: string, input: Record<string, unknown>): strin
       return `Deleted task ${input.id}`
     case 'create_subtask':
       return `Added sub-task "${input.title}"`
-    default:
-      return toolName
+    default: {
+      // MCP tools arrive as mcp__<server>__<tool>; show them as "server: tool"
+      const mcp = toolName.match(/^mcp__(.+?)__(.+)$/)
+      return mcp ? `${mcp[1]}: ${mcp[2]}` : toolName
+    }
   }
 }
 
