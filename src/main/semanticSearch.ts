@@ -2,19 +2,11 @@ import { app } from 'electron'
 import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { createHash } from 'crypto'
-import { env, pipeline, type FeatureExtractionPipeline } from '@xenova/transformers'
+import type { FeatureExtractionPipeline } from '@xenova/transformers'
 import { getTasks, getNotes } from './db'
 import type { SemanticHit } from '../shared/types'
 
 export type { SemanticHit }
-
-// Bundled model only — never reach out to HuggingFace at runtime. Search must
-// work offline, and task text must not leave the machine.
-env.allowRemoteModels = false
-env.allowLocalModels = true
-env.localModelPath = app.isPackaged
-  ? join(process.resourcesPath, 'models')
-  : join(app.getAppPath(), 'resources', 'models')
 
 const MODEL = 'all-MiniLM-L6-v2'
 const CACHE_PATH = join(app.getPath('userData'), 'search-index.json')
@@ -42,12 +34,37 @@ let index: IndexCache = {}
 let indexLoaded = false
 let indexing: Promise<void> | null = null
 
+/**
+ * Load transformers.js at runtime.
+ *
+ * The package is ESM-only while the main process is bundled as CommonJS, so a
+ * static import compiles to require() and fails with ERR_REQUIRE_ESM. The
+ * specifier is built indirectly to stop Vite rewriting this back into a
+ * require() at build time.
+ */
+async function loadTransformers(): Promise<typeof import('@xenova/transformers')> {
+  const specifier = '@xenova/transformers'
+  return (await import(/* @vite-ignore */ specifier)) as typeof import('@xenova/transformers')
+}
+
 async function getExtractor(): Promise<FeatureExtractionPipeline> {
   if (extractor) return extractor
   if (!extractorPromise) {
-    extractorPromise = pipeline('feature-extraction', `Xenova/${MODEL}`, {
-      quantized: true,
-    }) as Promise<FeatureExtractionPipeline>
+    extractorPromise = (async () => {
+      const { env, pipeline } = await loadTransformers()
+
+      // Bundled model only — never reach out to HuggingFace at runtime. Search
+      // must work offline, and task text must not leave the machine.
+      env.allowRemoteModels = false
+      env.allowLocalModels = true
+      env.localModelPath = app.isPackaged
+        ? join(process.resourcesPath, 'models')
+        : join(app.getAppPath(), 'resources', 'models')
+
+      return pipeline('feature-extraction', `Xenova/${MODEL}`, {
+        quantized: true,
+      }) as Promise<FeatureExtractionPipeline>
+    })()
   }
   extractor = await extractorPromise
   return extractor
