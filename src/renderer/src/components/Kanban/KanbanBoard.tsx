@@ -4,10 +4,10 @@ import { KANBAN_COLUMNS, type Task, type TaskStatus } from '../../../../shared/t
 import KanbanColumn from './KanbanColumn'
 import TaskDetailModal from './TaskDetailModal'
 import ZeroStateView from '../shared/ZeroStateView'
-import { flattenLabels, matchesSearch, matchesDue, matchesHiddenTags } from '../../utils/listHelpers'
+import { flattenLabels, matchesSearch, matchesDue, matchesHiddenTags, matchesAssignedToMe } from '../../utils/listHelpers'
 
 export default function KanbanBoard() {
-  const { tasks, labels, searchQuery, activeStatus, activePriority, activeDue, hiddenTags } = useTaskStore()
+  const { tasks, labels, searchQuery, activeStatus, activePriority, activeDue, assignedToMe, hiddenTags } = useTaskStore()
   const [detailTask, setDetailTask] = useState<Task | null>(null)
 
   const flatLabels = useMemo(() => flattenLabels(labels), [labels])
@@ -17,11 +17,12 @@ export default function KanbanBoard() {
       if (activeStatus   && t.status   !== activeStatus)   return false
       if (activePriority && t.priority !== activePriority) return false
       if (activeDue      && !matchesDue(t, activeDue))     return false
+      if (assignedToMe   && !matchesAssignedToMe(t))       return false
       if (matchesHiddenTags(t, hiddenTags)) return false
       if (searchQuery    && !matchesSearch(t, searchQuery, flatLabels)) return false
       return true
     }),
-    [tasks, searchQuery, activeStatus, activePriority, activeDue, hiddenTags, flatLabels]
+    [tasks, searchQuery, activeStatus, activePriority, activeDue, assignedToMe, hiddenTags, flatLabels]
   )
 
   const tasksByStatus = (status: TaskStatus) => visibleTasks.filter(t => t.status === status)

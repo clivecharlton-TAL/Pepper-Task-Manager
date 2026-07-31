@@ -15,14 +15,14 @@ function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length
 
 export default function ZeroStateView() {
   const [image, setImage] = useState<string>(() => pick(BUNDLED))
-  const { activeLabel, activeStatus, activePriority, activeDue, searchQuery } = useTaskStore()
+  const { activeLabel, activeStatus, activePriority, activeDue, assignedToMe, searchQuery } = useTaskStore()
 
   useEffect(() => {
     window.api.wallpapers.list().then(paths => {
       setImage(pick(paths.length > 0 ? paths : BUNDLED))
     })
   }, [])
-  const hasFilter = !!(activeLabel || activeStatus || activePriority || activeDue || searchQuery)
+  const hasFilter = !!(activeLabel || activeStatus || activePriority || activeDue || assignedToMe || searchQuery)
 
   return (
     <div className="flex-1 relative overflow-hidden">

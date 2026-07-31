@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Task, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, TaskStatus, TaskPriority, DomainEvent } from '../../../shared/types'
 import type { DueFilter } from '../../../shared/dateFilters'
+import { loadPref, savePref } from '../utils/persist'
 
 export type { DueFilter }
 export type ListSort  = 'due' | 'priority' | 'created' | 'title'
@@ -15,6 +16,9 @@ interface TaskStore {
   activeStatus: TaskStatus | null
   activePriority: TaskPriority | null
   activeDue: DueFilter | null
+  assignedToMe: boolean
+  statusCollapsed: boolean
+  priorityCollapsed: boolean
   searchQuery: string
   viewMode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar' | 'timeline' | 'notes'
   lastTaskViewMode: 'kanban' | 'list' | 'timeline'
@@ -35,6 +39,9 @@ interface TaskStore {
   setActiveStatus: (status: TaskStatus | null) => void
   setActivePriority: (priority: TaskPriority | null) => void
   setActiveDue: (due: DueFilter | null) => void
+  setAssignedToMe: (on: boolean) => void
+  toggleStatusCollapsed: () => void
+  togglePriorityCollapsed: () => void
   setSearchQuery: (q: string) => void
   setViewMode: (mode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar' | 'timeline' | 'notes') => void
   navigateToLabel: (labelId: string) => void
@@ -90,6 +97,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   activeStatus: null,
   activePriority: null,
   activeDue: null,
+  assignedToMe: false,
+  // Status/Priority panels default to collapsed; the last state is remembered.
+  statusCollapsed: loadPref('sidebar.statusCollapsed', true),
+  priorityCollapsed: loadPref('sidebar.priorityCollapsed', true),
   searchQuery: '',
   viewMode: 'kanban',
   lastTaskViewMode: 'kanban',
@@ -156,6 +167,20 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   setActivePriority: (priority) => set({ activePriority: priority }),
 
   setActiveDue: (due) => set({ activeDue: due }),
+
+  setAssignedToMe: (on) => set({ assignedToMe: on }),
+
+  toggleStatusCollapsed: () => set(s => {
+    const statusCollapsed = !s.statusCollapsed
+    savePref('sidebar.statusCollapsed', statusCollapsed)
+    return { statusCollapsed }
+  }),
+
+  togglePriorityCollapsed: () => set(s => {
+    const priorityCollapsed = !s.priorityCollapsed
+    savePref('sidebar.priorityCollapsed', priorityCollapsed)
+    return { priorityCollapsed }
+  }),
 
   setSearchQuery: (q) => set({ searchQuery: q }),
   setViewMode: (mode) => set(s => ({

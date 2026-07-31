@@ -176,7 +176,7 @@ interface TopBarProps {
 
 export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
   const {
-    activeLabel, activeStatus, activePriority, activeDue,
+    activeLabel, activeStatus, activePriority, activeDue, assignedToMe,
     searchQuery, setSearchQuery,
     viewMode, setViewMode,
     listSort, setListSort,
@@ -224,9 +224,10 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
         <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Calendar</span>
       ) : viewMode === 'notes' ? (
         <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Notes</span>
-      ) : (activeLabel || activeStatus || activePriority || activeDue) ? (
+      ) : (activeLabel || activeStatus || activePriority || activeDue || assignedToMe) ? (
         <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
           {[
+            assignedToMe   && 'my tasks',
             activeStatus   && activeStatus.replace('_', ' '),
             activePriority && `${activePriority} priority`,
             activeDue      && activeDue.replace('_', ' '),

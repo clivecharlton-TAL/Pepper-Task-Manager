@@ -1,6 +1,7 @@
 import type { Task, LabelNode, TaskStatus, TaskPriority } from '../../../shared/types'
 import { type ListSort, type ListGroup, type DueFilter } from '../stores/taskStore'
 import { PRIORITY_RANK } from '../../../shared/taskPriority'
+import { isMe } from '../../../shared/team'
 
 export { matchesDue } from '../../../shared/dateFilters'
 export { PRIORITY_RANK }
@@ -20,6 +21,10 @@ export function matchesSearch(task: Task, q: string, flat: LabelNode[]): boolean
   if (task.labels.some(id => flat.find(l => l.id === id)?.name.toLowerCase().includes(s))) return true
   if ((task.assigned ?? []).some(name => name.toLowerCase().includes(s))) return true
   return false
+}
+
+export function matchesAssignedToMe(task: Task): boolean {
+  return (task.assigned ?? []).some(isMe)
 }
 
 export function matchesHiddenTags(task: Task, hiddenTags: string[]): boolean {

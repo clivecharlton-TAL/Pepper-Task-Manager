@@ -4,6 +4,7 @@ import { useTaskStore, type DueFilter } from '../../stores/taskStore'
 import LabelTree from './LabelTree'
 import type { TaskStatus, TaskPriority, LabelNode } from '../../../../shared/types'
 import { matchesDue } from '../../../../shared/dateFilters'
+import { matchesAssignedToMe } from '../../utils/listHelpers'
 
 function IconBacklog() {
   return (
@@ -111,6 +112,61 @@ function IconCalendarWeek() {
   )
 }
 
+function IconPerson() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7" cy="4.5" r="2.5"/>
+      <path d="M2 12.5c0-2.5 2.2-4 5-4s5 1.5 5 4"/>
+    </svg>
+  )
+}
+
+function IconChevron({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg
+      width="9" height="9" viewBox="0 0 10 10" fill="none"
+      stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+      className="transition-transform duration-150"
+      style={{ transform: collapsed ? 'rotate(-90deg)' : 'none' }}
+    >
+      <path d="M2 3.5 L5 6.5 L8 3.5"/>
+    </svg>
+  )
+}
+
+/**
+ * Section header that toggles its panel open/closed. When collapsed with a
+ * filter still applied inside, the active value is shown on the header so the
+ * filter never becomes invisible.
+ */
+function CollapsibleHeader({ title, collapsed, onToggle, activeLabel, activeColour }: {
+  title: string; collapsed: boolean; onToggle: () => void
+  activeLabel?: string | null; activeColour?: string
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      aria-expanded={!collapsed}
+      className="w-full flex items-center gap-1.5 px-3 py-1.5 mb-1 rounded text-left group hover:bg-[#2a2a2a] transition-colors"
+    >
+      <span className="text-[#4a4a4a] group-hover:text-[#a8a8a8] transition-colors flex-shrink-0">
+        <IconChevron collapsed={collapsed} />
+      </span>
+      <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a] group-hover:text-[#a8a8a8] transition-colors flex-1">
+        {title}
+      </span>
+      {collapsed && activeLabel && (
+        <span
+          className="font-mono text-[9px] px-1.5 py-0.5 rounded flex-shrink-0 capitalize"
+          style={{ backgroundColor: (activeColour ?? '#c45d2e') + '22', color: activeColour ?? '#c45d2e' }}
+        >
+          {activeLabel}
+        </span>
+      )}
+    </button>
+  )
+}
+
 const DUE_META: { id: DueFilter; label: string; colour: string; icon: ReactNode }[] = [
   { id: 'overdue',   label: 'Overdue',   colour: '#FC2847', icon: <IconClock /> },
   { id: 'today',     label: 'Today',     colour: '#FF9F0A', icon: <IconCalendarDay /> },
@@ -185,6 +241,9 @@ export default function Sidebar({ width }: { width?: number }) {
     activeStatus, setActiveStatus,
     activePriority, setActivePriority,
     activeDue, setActiveDue,
+    assignedToMe, setAssignedToMe,
+    statusCollapsed, toggleStatusCollapsed,
+    priorityCollapsed, togglePriorityCollapsed,
     allTasks, labels
   } = useTaskStore()
 
@@ -215,8 +274,12 @@ export default function Sidebar({ width }: { width?: number }) {
     setActiveStatus(null)
     setActivePriority(null)
     setActiveDue(null)
+    setAssignedToMe(false)
   }
-  const isAllActive = activeLabel === null && activeStatus === null && activePriority === null && activeDue === null
+  const isAllActive = activeLabel === null && activeStatus === null && activePriority === null && activeDue === null && !assignedToMe
+
+  const activeStatusMeta   = STATUS_META.find(s => s.id === activeStatus)
+  const activePriorityMeta = PRIORITY_META.find(p => p.id === activePriority)
 
   return (
     <div
@@ -248,6 +311,14 @@ export default function Sidebar({ width }: { width?: number }) {
         <div className="px-3 py-1.5 mb-1">
           <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Due</span>
         </div>
+        <FilterRow
+          colour="#c45d2e"
+          label="My Tasks"
+          count={allTasks.filter(t => t.status !== 'done' && matchesAssignedToMe(t)).length}
+          isActive={assignedToMe}
+          onClick={() => setAssignedToMe(!assignedToMe)}
+          icon={<IconPerson />}
+        />
         {DUE_META.map(d => (
           <FilterRow
             key={d.id}
@@ -265,10 +336,14 @@ export default function Sidebar({ width }: { width?: number }) {
 
       {/* Status filters */}
       <div className="px-2 pb-2 flex-shrink-0">
-        <div className="px-3 py-1.5 mb-1">
-          <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Status</span>
-        </div>
-        {STATUS_META.map(s => (
+        <CollapsibleHeader
+          title="Status"
+          collapsed={statusCollapsed}
+          onToggle={toggleStatusCollapsed}
+          activeLabel={activeStatusMeta?.label}
+          activeColour={activeStatusMeta?.colour}
+        />
+        {!statusCollapsed && STATUS_META.map(s => (
           <FilterRow
             key={s.id}
             colour={s.colour}
@@ -285,10 +360,14 @@ export default function Sidebar({ width }: { width?: number }) {
 
       {/* Priority filters */}
       <div className="px-2 pb-2 flex-shrink-0">
-        <div className="px-3 py-1.5 mb-1">
-          <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Priority</span>
-        </div>
-        {PRIORITY_META.map(p => (
+        <CollapsibleHeader
+          title="Priority"
+          collapsed={priorityCollapsed}
+          onToggle={togglePriorityCollapsed}
+          activeLabel={activePriorityMeta?.label}
+          activeColour={activePriorityMeta?.colour}
+        />
+        {!priorityCollapsed && PRIORITY_META.map(p => (
           <FilterRow
             key={p.id}
             colour={p.colour}

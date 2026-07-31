@@ -36,6 +36,17 @@ export const TEAM_MEMBERS: TeamMember[] = ROSTER.map(([name, role]) => ({
   name, role, email: emailFor(name),
 }))
 
+// The app's owner — used by the "My Tasks" filter to match assignees
+export const ME = 'Clive Charlton'
+export const ME_EMAIL = emailFor(ME)
+
+// Assignees are free-text names entered via @mention, so match on name or email,
+// case-insensitively, rather than requiring an exact string equality.
+export function isMe(assignee: string): boolean {
+  const s = assignee.trim().toLowerCase().replace(/^@/, '')
+  return s === ME.toLowerCase() || s === ME_EMAIL
+}
+
 // Build a regex that matches @Name for any team member — used for display highlighting
 const escaped = TEAM_MEMBERS.map(m => m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
 export const MENTION_REGEX = new RegExp(`@(${escaped.join('|')})`, 'g')
