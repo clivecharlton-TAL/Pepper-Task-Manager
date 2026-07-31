@@ -78,7 +78,7 @@ export default function AIChatPanel({ isOpen, onClose }: Props) {
     } catch (err) {
       const errMsg = err instanceof Error && err.message === 'NO_API_KEY'
         ? 'No API key configured. Add your Anthropic API key in settings.'
-        : 'Something went wrong. Please try again.'
+        : `Something went wrong: ${err instanceof Error ? err.message : String(err)}`
       setMessages(prev => [...prev, { role: 'assistant', content: errMsg }])
     } finally {
       unsubChunk()
