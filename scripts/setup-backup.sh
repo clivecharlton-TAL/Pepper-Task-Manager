@@ -106,6 +106,11 @@ cp "$SCRIPT_DIR/backup-db.sh" "$RUNNER" || exit 1
 chmod +x "$RUNNER"
 echo "Installed runner at $RUNNER"
 
+WATCHDOG="$HOME/.pepper-backup-watchdog.sh"
+cp "$SCRIPT_DIR/backup-watchdog.sh" "$WATCHDOG" || exit 1
+chmod +x "$WATCHDOG"
+echo "Installed watchdog at $WATCHDOG"
+
 # 4. Install the launchd job.
 #    StartCalendarInterval fires daily at 12:00. launchd runs a missed job when
 #    the machine wakes, so a closed laptop delays the backup rather than
@@ -159,13 +164,56 @@ launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null || {
   echo "Run: launchctl bootstrap gui/$(id -u) $PLIST"
 }
 
+# 5. Install the watchdog as a separate job, so a disabled backup job still
+#    gets noticed by something.
+WATCHDOG_PLIST="$HOME/Library/LaunchAgents/com.pepper.backup-watchdog.plist"
+cat > "$WATCHDOG_PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.pepper.backup-watchdog</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>$WATCHDOG</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>18</integer>
+        <key>Minute</key><integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+EOF
+
+launchctl bootout "gui/$(id -u)/com.pepper.backup-watchdog" 2>/dev/null
+launchctl bootstrap "gui/$(id -u)" "$WATCHDOG_PLIST" 2>/dev/null || \
+  echo "WARNING: could not load watchdog job"
+
 echo
 echo "Setup complete."
 echo "  Repo:     https://github.com/$OWNER/$REPO_NAME (private)"
 echo "  Local:    $REPO"
 echo "  Runner:   $RUNNER"
 echo "  Schedule: daily 12:00, plus every 6h, plus on wake"
+echo "  Watchdog: daily 18:00 (alerts if no backup in 36h)"
 echo "  Log:      ~/Library/Logs/pepper-backup.log"
 echo
-echo "Note: launchd runs the copy at \$RUNNER, not the repo script."
-echo "After editing scripts/backup-db.sh, re-run this setup to reinstall it."
+echo "Check health any time:  bash scripts/backup-status.sh"
+echo
+echo "Note: launchd runs the copies at ~/.pepper-backup-run.sh and"
+echo "~/.pepper-backup-watchdog.sh, not the repo scripts. After editing"
+echo "either script, re-run this setup to reinstall them."

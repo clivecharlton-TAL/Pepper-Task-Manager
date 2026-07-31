@@ -21,7 +21,14 @@ mkdir -p "$(dirname "$LOG")"
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S')  $*" >> "$LOG"; }
 
-fail() { log "ERROR: $*"; exit 1; }
+# Surface failures on screen, not just in a log file nobody reads. A silently
+# broken backup is worse than no backup, because it is trusted.
+notify() {
+  osascript -e "display notification \"$1\" with title \"Pepper Backup\" sound name \"Basso\"" \
+    >/dev/null 2>&1 || true
+}
+
+fail() { log "ERROR: $*"; notify "FAILED: $*"; exit 1; }
 
 log "--- backup starting ---"
 
