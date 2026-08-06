@@ -1,11 +1,15 @@
 import { app } from 'electron'
-import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, readdirSync, type Dirent } from 'fs'
+import { readdir } from 'fs/promises'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import initSqlJs, { Database } from 'sql.js'
 import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem, TaskAttachment, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters } from '../shared/types'
 
 const DB_PATH = join(app.getPath('userData'), 'tasks.db')
+
+const DRIVE_SCAN_BUDGET_MS = 20_000
+const DIR_READ_TIMEOUT_MS = 3_000
 
 let db: Database | null = null
 let dbInitPromise: Promise<Database> | null = null
@@ -303,15 +307,47 @@ export async function createLabel(id: string, name: string, parentId: string | n
   save()
 }
 
+/**
+ * Mirror the numbered Drive folder tree into labels.
+ *
+ * Uses the async fs API deliberately. Google Drive is a network mount, so a
+ * recursive readdirSync here blocks the main thread on network I/O — long
+ * enough to beachball the app before any window paints. The await yields to
+ * the event loop between directories, so the UI comes up while this runs.
+ */
 export async function syncLabelsFromDrive(drivePath: string): Promise<{ added: number }> {
   if (!existsSync(drivePath)) return { added: 0 }
   const d = await getDb()
   let added = 0
 
-  function scan(dir: string, parentId: string | null, colour: string, depth: number): void {
+  // Drive can be arbitrarily slow (or stall entirely) when files are still
+  // downloading. Bound the walk so a wedged mount degrades to "some labels
+  // missing until next launch" instead of scanning forever.
+  const deadline = Date.now() + DRIVE_SCAN_BUDGET_MS
+  let timedOut = false
+
+  // A single readdir on a stalled Drive mount can hang far longer than the
+  // whole budget, so each call is raced against its own timeout rather than
+  // only checking the deadline between directories.
+  async function readdirCapped(dir: string): Promise<Dirent[] | null> {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      return await Promise.race([
+        readdir(dir, { withFileTypes: true }),
+        new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), DIR_READ_TIMEOUT_MS) }),
+      ])
+    } catch {
+      return null
+    } finally {
+      if (timer) clearTimeout(timer)
+    }
+  }
+
+  async function scan(dir: string, parentId: string | null, colour: string, depth: number): Promise<void> {
     if (depth > 3) return
-    let entries: ReturnType<typeof readdirSync>
-    try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return }
+    if (Date.now() > deadline) { timedOut = true; return }
+    const entries = await readdirCapped(dir)
+    if (entries === null) { timedOut = true; return }
 
     for (const entry of entries) {
       if (!entry.isDirectory()) continue
@@ -325,11 +361,12 @@ export async function syncLabelsFromDrive(drivePath: string): Promise<{ added: n
         [id, entry.name, parentId, entryColour, sortOrder])
       if (d.getRowsModified() > 0) added++
 
-      scan(join(dir, entry.name), id, entryColour, depth + 1)
+      await scan(join(dir, entry.name), id, entryColour, depth + 1)
     }
   }
 
-  scan(drivePath, null, '#8E8E93', 0)
+  await scan(drivePath, null, '#8E8E93', 0)
+  if (timedOut) console.warn(`Drive label sync hit its ${DRIVE_SCAN_BUDGET_MS / 1000}s budget — tree partially scanned`)
   if (added > 0) save()
   return { added }
 }
