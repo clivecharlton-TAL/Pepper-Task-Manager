@@ -87,6 +87,7 @@ export type DomainEvent =
   | { type: 'recording:analyzing'; noteId: string }
   | { type: 'recording:done'; noteId: string }
   | { type: 'recording:error'; noteId: string; message: string }
+  | { type: 'ops:updated'; count: number }
 
 export interface RecordingPermissionStatus {
   microphone: 'granted' | 'denied' | 'not-determined'
@@ -136,6 +137,33 @@ export interface TaskLink {
   url: string
   name: string
   added_at: string
+}
+
+// Operational signals (Jira incidents etc). Deliberately separate from Task:
+// these are read-only, owned by other people, and must never reach the task
+// domain — see "Track this" for the one-way manual bridge.
+export interface OpsSignal {
+  key: string                        // 'SR-5671'
+  source: string                     // 'jira'
+  title: string
+  status: string                     // raw Jira status, e.g. "Un-ack'ed"
+  assignee_account_id: string | null
+  assignee_name: string | null
+  labels: string[]
+  url: string
+  issue_created_at: string
+  issue_updated_at: string
+  synced_at: string
+  tracked_task_id: string | null
+}
+
+export type OpsBand = 'attention' | 'open' | 'resolved'
+
+export interface JiraCredentials {
+  jiraEmail: string
+  jiraApiToken: string
+  jiraSiteUrl: string
+  opsJql: string
 }
 
 export interface FileEntry {

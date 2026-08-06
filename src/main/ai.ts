@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { app } from 'electron'
 import { getMcpTools } from './mcp'
+import type { JiraCredentials } from '../shared/types'
 
 const CONFIG_PATH = join(app.getPath('userData'), 'config.json')
 
@@ -28,6 +29,36 @@ export function getCalendarIcsUrl(): string | undefined {
 export function saveCalendarIcsUrl(url: string): void {
   const cfg = readConfig()
   cfg.googleCalendarIcsUrl = url.trim()
+  writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2))
+}
+
+const DEFAULT_OPS_JQL = 'project = SR AND text ~ "Oracle" ORDER BY created DESC'
+
+// Returns null unless both halves of the Basic auth pair are present — callers
+// treat null as "not configured yet" and skip polling rather than erroring.
+export function getJiraCredentials(): JiraCredentials | null {
+  const cfg = readConfig()
+  if (!cfg.jiraEmail || !cfg.jiraApiToken || !cfg.jiraSiteUrl) return null
+  return {
+    jiraEmail: cfg.jiraEmail,
+    jiraApiToken: cfg.jiraApiToken,
+    jiraSiteUrl: cfg.jiraSiteUrl.replace(/\/+$/, ''),
+    opsJql: cfg.opsJql || DEFAULT_OPS_JQL,
+  }
+}
+
+export function hasJiraCredentials(): boolean {
+  return getJiraCredentials() !== null
+}
+
+// The token never travels back to the renderer — only hasJiraCredentials() does,
+// mirroring the hasApiKey() precedent above.
+export function saveJiraCredentials(input: { jiraEmail: string; jiraApiToken: string; jiraSiteUrl: string; opsJql?: string }): void {
+  const cfg = readConfig()
+  cfg.jiraEmail = input.jiraEmail.trim()
+  cfg.jiraApiToken = input.jiraApiToken.trim()
+  cfg.jiraSiteUrl = input.jiraSiteUrl.trim().replace(/\/+$/, '')
+  if (input.opsJql) cfg.opsJql = input.opsJql.trim()
   writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2))
 }
 

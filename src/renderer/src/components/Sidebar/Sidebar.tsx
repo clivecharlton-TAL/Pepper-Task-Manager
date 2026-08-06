@@ -5,6 +5,15 @@ import LabelTree from './LabelTree'
 import type { TaskStatus, TaskPriority, LabelNode } from '../../../../shared/types'
 import { matchesDue } from '../../../../shared/dateFilters'
 import { matchesAssignedToMe } from '../../utils/listHelpers'
+import { useOpsStore, attentionCount } from '../../stores/opsStore'
+
+function IconOps() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 7.5h3l1.5-3.5 2 7 1.5-3.5h3" />
+    </svg>
+  )
+}
 
 function IconBacklog() {
   return (
@@ -244,8 +253,12 @@ export default function Sidebar({ width }: { width?: number }) {
     assignedToMe, setAssignedToMe,
     statusCollapsed, toggleStatusCollapsed,
     priorityCollapsed, togglePriorityCollapsed,
-    allTasks, labels
+    allTasks, labels,
+    viewMode, setViewMode
   } = useTaskStore()
+
+  const opsSignals = useOpsStore(s => s.signals)
+  const opsAttention = attentionCount(opsSignals)
 
   const crossCuttingLabels = labels.filter(l => l.id.startsWith('+'))
   const [addingTag,  setAddingTag]  = useState(false)
@@ -438,6 +451,20 @@ export default function Sidebar({ width }: { width?: number }) {
           <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Labels</span>
         </div>
         <LabelTree />
+      </div>
+
+      {/* Ops — ambient line of sight into operations. Pinned to the bottom so
+          it stays peripheral; amber only when something needs attention. */}
+      <div className="h-px bg-[#2e2e2e] mx-3 mb-2 flex-shrink-0" />
+      <div className="px-2 pb-3 flex-shrink-0">
+        <FilterRow
+          colour={opsAttention > 0 ? '#FF9F0A' : '#6b7280'}
+          label="Ops"
+          count={opsAttention}
+          isActive={viewMode === 'ops'}
+          onClick={() => setViewMode('ops')}
+          icon={<IconOps />}
+        />
       </div>
     </div>
   )

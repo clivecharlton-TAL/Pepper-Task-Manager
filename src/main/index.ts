@@ -8,6 +8,7 @@ import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
 import { initMcpServers, shutdownMcpServers } from './mcp'
 import { warmSemanticSearch } from './semanticSearch'
+import { startOpsPoller, stopOpsPoller } from './opsSignals'
 import { matchesDue } from '../shared/dateFilters'
 import { PRIORITY_RANK, PRIORITY_GLYPH } from '../shared/taskPriority'
 
@@ -345,6 +346,10 @@ app.whenReady().then(async () => {
   // cheap after the first run.
   warmSemanticSearch()
 
+  // Poll Jira for operational signals. No-ops until credentials are configured,
+  // and never throws — a Jira outage must not affect the rest of the app.
+  startOpsPoller()
+
   // Silently pick up any new Drive folders added since last launch
   const drivePath = join(homedir(), 'Library/CloudStorage/GoogleDrive/My Drive')
   syncLabelsFromDrive(drivePath).then(({ added }) => {
@@ -371,6 +376,7 @@ let mcpShutdownDone = false
 
 app.on('will-quit', (event) => {
   globalShortcut.unregisterAll()
+  stopOpsPoller()
 
   // Closing the stdio transports is async, so hold the quit for one pass and
   // re-issue it once the child processes are gone.

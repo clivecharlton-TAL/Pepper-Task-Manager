@@ -19,6 +19,7 @@ import FilesView from './Files/FilesView'
 import CalendarView from './Calendar/CalendarView'
 import TimelineView from './Timeline/TimelineView'
 import NotesView from './Notes/NotesView'
+import { OpsView } from './Ops/OpsView'
 import TopBar from './shared/TopBar'
 import MeetingBriefingPanel from './MeetingBriefingPanel'
 import AIChatPanel from './AIChatPanel'
@@ -185,6 +186,7 @@ export default function MainWindow() {
            viewMode === 'files'    ? <FilesView />     :
            viewMode === 'timeline' ? <TimelineView />  :
            viewMode === 'notes'    ? <NotesView />     :
+           viewMode === 'ops'      ? <OpsView />       :
                                      <CalendarView />}
         </div>
       </div>

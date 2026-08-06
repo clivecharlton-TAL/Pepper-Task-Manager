@@ -225,6 +225,8 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
         <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Calendar</span>
       ) : viewMode === 'notes' ? (
         <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Notes</span>
+      ) : viewMode === 'ops' ? (
+        <span className="font-mono text-[10px] tracking-widest uppercase text-[#4a4a4a]">Ops</span>
       ) : (activeLabel || activeStatus || activePriority || activeDue || assignedToMe) ? (
         <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
           {[
@@ -386,7 +388,7 @@ export default function TopBar({ isAIChatOpen, onToggleAIChat }: TopBarProps) {
       </button>
 
       {/* Tag filter (all task views) */}
-      {!isNotes && viewMode !== 'reports' && viewMode !== 'files' && viewMode !== 'calendar' && tagOptions.length > 0 && (
+      {!isNotes && viewMode !== 'reports' && viewMode !== 'files' && viewMode !== 'calendar' && viewMode !== 'ops' && tagOptions.length > 0 && (
         <MultiSelectControl
           label="Tags"
           options={tagOptions}

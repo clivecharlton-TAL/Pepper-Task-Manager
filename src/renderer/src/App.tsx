@@ -7,6 +7,7 @@ import { useNoteStore } from './stores/noteStore'
 import { useAttachmentCountStore } from './stores/attachmentCountStore'
 import { useSubTaskCountStore } from './stores/subTaskCountStore'
 import { useRecordingStore } from './stores/recordingStore'
+import { useOpsStore } from './stores/opsStore'
 
 export default function App() {
   const { isQuickAdd } = useLocation()
@@ -15,6 +16,7 @@ export default function App() {
   const { loadCounts } = useAttachmentCountStore()
   const { loadCounts: loadSubTaskCounts } = useSubTaskCountStore()
   const { init: initRecording } = useRecordingStore()
+  const { loadSignals, init: initOps } = useOpsStore()
 
   useEffect(() => {
     loadLabels()
@@ -25,10 +27,13 @@ export default function App() {
       loadAllNotes()
       loadCounts()
       loadSubTaskCounts()
+      // Loaded at startup so the sidebar indicator is live without opening the view
+      loadSignals()
       const unsubTasks = init()
       const unsubNotes = initNotes()
       const unsubRecording = initRecording()
-      return () => { unsubTasks(); unsubNotes(); unsubRecording() }
+      const unsubOps = initOps()
+      return () => { unsubTasks(); unsubNotes(); unsubRecording(); unsubOps() }
     }
   }, [isQuickAdd])
 

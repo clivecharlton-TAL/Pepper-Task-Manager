@@ -13,9 +13,10 @@ const ExcelJS = require('exceljs')
 
 const execAsync = promisify(exec)
 import Anthropic from '@anthropic-ai/sdk'
-import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink, getNotes, getNote, createNote, updateNote, deleteNote } from './db'
+import { getTasks, createTask, updateTask, deleteTask, getTask, getLabelTree, syncLabelsFromDrive, getReportData, createLabel, listAttachments, addAttachment, removeAttachment, countAttachments, listSubTasks, createSubTask, updateSubTask, deleteSubTask, countSubTasks, listLinks, addLink, removeLink, getNotes, getNote, createNote, updateNote, deleteNote, listOpsSignals, setOpsSignalTracked } from './db'
 import { listFiles, openFile, revealFile, createFolder } from './files'
-import { hasApiKey, saveApiKey, getCalendarIcsUrl, saveCalendarIcsUrl, streamDraft, streamQuery, streamBriefing, analyzeTranscript } from './ai'
+import { hasApiKey, saveApiKey, getCalendarIcsUrl, saveCalendarIcsUrl, streamDraft, streamQuery, streamBriefing, analyzeTranscript, hasJiraCredentials, saveJiraCredentials } from './ai'
+import { syncOpsSignals } from './opsSignals'
 import { callMcpTool } from './mcp'
 import { semanticSearch, buildIndex } from './semanticSearch'
 import { broadcast } from './events'
@@ -350,6 +351,30 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('links:add',    (_e, taskId: string, url: string, name: string) => addLink(taskId, url, name))
   ipcMain.handle('links:remove', (_e, id: string) => removeLink(id))
   ipcMain.handle('links:open',   (_e, url: string) => shell.openExternal(url))
+
+  ipcMain.handle('ops:list',            () => listOpsSignals())
+  ipcMain.handle('ops:refresh',         () => syncOpsSignals())
+  ipcMain.handle('ops:open',            (_e, url: string) => shell.openExternal(url))
+  ipcMain.handle('ops:has-credentials', () => hasJiraCredentials())
+  ipcMain.handle('ops:save-credentials', (_e, input: { jiraEmail: string; jiraApiToken: string; jiraSiteUrl: string; opsJql?: string }) => {
+    saveJiraCredentials(input)
+  })
+
+  // The one-way bridge from the ops domain into tasks. Nothing crosses
+  // automatically — this only ever runs when the user clicks "Track this".
+  ipcMain.handle('ops:track', async (_e, signal: { key: string; title: string; url: string }) => {
+    const task = await createTask({
+      title: `${signal.key} — ${signal.title}`,
+      notes: signal.url,
+      status: 'todo',
+      priority: 'medium',
+    })
+    broadcast({ type: 'task:created', task })
+    await addLink(task.id, signal.url, signal.key)
+    const updated = await setOpsSignalTracked(signal.key, task.id)
+    broadcast({ type: 'ops:updated', count: 0 })
+    return { task, signal: updated }
+  })
 
   ipcMain.handle('files:list', (_e, relativePath: string) => listFiles(relativePath))
   ipcMain.handle('files:open', (_e, relativePath: string) => openFile(relativePath))

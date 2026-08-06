@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters, RecordingPermissionStatus, SemanticHit } from '../shared/types'
+import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters, RecordingPermissionStatus, SemanticHit, OpsSignal } from '../shared/types'
 
 const api = {
   tasks: {
@@ -104,6 +104,17 @@ const api = {
   },
   wallpapers: {
     list: (): Promise<string[]> => ipcRenderer.invoke('wallpapers:list'),
+  },
+  ops: {
+    list:    (): Promise<OpsSignal[]> => ipcRenderer.invoke('ops:list'),
+    refresh: (): Promise<number>      => ipcRenderer.invoke('ops:refresh'),
+    open:    (url: string): Promise<void> => ipcRenderer.invoke('ops:open', url),
+    track:   (signal: { key: string; title: string; url: string }): Promise<{ task: Task; signal: OpsSignal | null }> =>
+      ipcRenderer.invoke('ops:track', signal),
+    // Boolean only — the API token never crosses into the renderer.
+    hasCredentials:  (): Promise<boolean> => ipcRenderer.invoke('ops:has-credentials'),
+    saveCredentials: (input: { jiraEmail: string; jiraApiToken: string; jiraSiteUrl: string; opsJql?: string }): Promise<void> =>
+      ipcRenderer.invoke('ops:save-credentials', input),
   },
   window: {
     hideQuickAdd: () => ipcRenderer.send('quick-add:hide'),

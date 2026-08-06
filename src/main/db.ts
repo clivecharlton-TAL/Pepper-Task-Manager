@@ -4,7 +4,7 @@ import { readdir } from 'fs/promises'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import initSqlJs, { Database } from 'sql.js'
-import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem, TaskAttachment, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters } from '../shared/types'
+import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem, TaskAttachment, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters, OpsSignal } from '../shared/types'
 
 const DB_PATH = join(app.getPath('userData'), 'tasks.db')
 
@@ -116,6 +116,21 @@ function migrate(db: Database): void {
       archived           INTEGER NOT NULL DEFAULT 0,
       created_at         TEXT NOT NULL,
       updated_at         TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS ops_signals (
+      key                 TEXT PRIMARY KEY,
+      source              TEXT NOT NULL,
+      title               TEXT NOT NULL,
+      status              TEXT NOT NULL,
+      assignee_account_id TEXT,
+      assignee_name       TEXT,
+      labels              TEXT NOT NULL DEFAULT '[]',
+      url                 TEXT NOT NULL,
+      issue_created_at    TEXT NOT NULL,
+      issue_updated_at    TEXT NOT NULL,
+      synced_at           TEXT NOT NULL,
+      tracked_task_id     TEXT
     );
   `)
 
@@ -657,6 +672,62 @@ export async function removeLink(linkId: string): Promise<void> {
   const d = await getDb()
   run(d, 'DELETE FROM task_links WHERE id = ?', [linkId])
   save()
+}
+
+// ─── Ops Signals ────────────────────────────────────────────────────────────
+
+function parseOpsSignal(row: Record<string, unknown>): OpsSignal {
+  return {
+    ...(row as Omit<OpsSignal, 'labels'>),
+    labels: JSON.parse((row.labels as string | null | undefined) ?? '[]'),
+  }
+}
+
+export async function listOpsSignals(): Promise<OpsSignal[]> {
+  const d = await getDb()
+  return all<Record<string, unknown>>(
+    d, 'SELECT * FROM ops_signals ORDER BY issue_created_at DESC'
+  ).map(parseOpsSignal)
+}
+
+// Batched deliberately: sql.js rewrites the whole DB file on save(), so a
+// per-row save would rewrite it once per issue on every poll.
+export async function upsertOpsSignals(signals: OpsSignal[]): Promise<number> {
+  if (signals.length === 0) return 0
+  const d = await getDb()
+  for (const s of signals) {
+    run(d, `INSERT INTO ops_signals
+        (key, source, title, status, assignee_account_id, assignee_name, labels, url,
+         issue_created_at, issue_updated_at, synced_at, tracked_task_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET
+        source = excluded.source,
+        title = excluded.title,
+        status = excluded.status,
+        assignee_account_id = excluded.assignee_account_id,
+        assignee_name = excluded.assignee_name,
+        labels = excluded.labels,
+        url = excluded.url,
+        issue_updated_at = excluded.issue_updated_at,
+        synced_at = excluded.synced_at`,
+      [
+        s.key, s.source, s.title, s.status,
+        s.assignee_account_id ?? null, s.assignee_name ?? null,
+        JSON.stringify(s.labels), s.url,
+        s.issue_created_at, s.issue_updated_at, s.synced_at,
+        s.tracked_task_id ?? null,
+      ])
+  }
+  save()
+  return signals.length
+}
+
+export async function setOpsSignalTracked(key: string, taskId: string | null): Promise<OpsSignal | null> {
+  const d = await getDb()
+  run(d, 'UPDATE ops_signals SET tracked_task_id = ? WHERE key = ?', [taskId, key])
+  save()
+  const row = get<Record<string, unknown>>(d, 'SELECT * FROM ops_signals WHERE key = ?', [key])
+  return row ? parseOpsSignal(row) : null
 }
 
 // ─── Sub-tasks ──────────────────────────────────────────────────────────────
