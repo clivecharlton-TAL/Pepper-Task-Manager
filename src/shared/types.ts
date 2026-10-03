@@ -88,6 +88,7 @@ export type DomainEvent =
   | { type: 'recording:done'; noteId: string }
   | { type: 'recording:error'; noteId: string; message: string }
   | { type: 'ops:updated'; count: number }
+  | { type: 'org:changed' }
 
 export interface RecordingPermissionStatus {
   microphone: 'granted' | 'denied' | 'not-determined'

@@ -2,7 +2,8 @@ import { app, BrowserWindow, Tray, Menu, type MenuItemConstructorOptions, global
 import { createServer } from 'http'
 import { join } from 'path'
 import { homedir } from 'os'
-import { syncLabelsFromDrive, createTask, getTasks, updateTask, addLink } from './db'
+import { loadTeamFromOrg } from './orgSync'
+import { syncLabelsFromDrive, createTask, getTasks, getTask, updateTask, deleteTask, addLink } from './db'
 import { broadcast } from './events'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
@@ -11,12 +12,53 @@ import { warmSemanticSearch } from './semanticSearch'
 import { startOpsPoller, stopOpsPoller } from './opsSignals'
 import { matchesDue } from '../shared/dateFilters'
 import { PRIORITY_RANK, PRIORITY_GLYPH } from '../shared/taskPriority'
+import type { TaskFilters } from '../shared/types'
 
 const LOCAL_API_PORT = 47832
 
 function startLocalApi(): void {
   const server = createServer((req, res) => {
     const url = req.url ?? ''
+    const path = url.split('?')[0]
+    const idMatch = path.match(/^\/tasks\/([^/]+)$/)
+
+    // Reads and deletes go through the app too. The app holds the database in
+    // memory and overwrites the file on every save, so anything that touches
+    // tasks.db directly while Pepper is running gets lost (pepper-tasks MCP).
+    if (req.method === 'GET' && path === '/tasks') {
+      const q = new URL(url, 'http://localhost').searchParams
+      getTasks({
+        status: (q.get('status') ?? undefined) as TaskFilters['status'],
+        priority: (q.get('priority') ?? undefined) as TaskFilters['priority'],
+        label: q.get('label') ?? undefined,
+        search: q.get('search') ?? undefined,
+      }).then(tasks => {
+        const dueBefore = q.get('due_before')
+        const out = dueBefore ? tasks.filter(t => t.due_date && t.due_date <= dueBefore) : tasks
+        res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(out))
+      }).catch(e => res.writeHead(500).end(String(e)))
+      return
+    }
+
+    if (req.method === 'GET' && idMatch) {
+      getTask(idMatch[1]).then(task => {
+        if (!task) { res.writeHead(404).end(); return }
+        res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(task))
+      }).catch(e => res.writeHead(500).end(String(e)))
+      return
+    }
+
+    if (req.method === 'DELETE' && idMatch) {
+      const id = idMatch[1]
+      getTask(id).then(async task => {
+        if (!task) { res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ deleted: false })); return }
+        await deleteTask(id)
+        broadcast({ type: 'task:deleted', id })
+        res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ deleted: true }))
+      }).catch(e => res.writeHead(500).end(String(e)))
+      return
+    }
+
     const patchMatch = req.method === 'PATCH' && url.match(/^\/tasks\/([^/]+)$/)
     const linkMatch = req.method === 'POST' && url.match(/^\/tasks\/([^/]+)\/links$/)
 
@@ -326,6 +368,7 @@ const TRAY_ICON_BASE64 = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAY
 app.whenReady().then(async () => {
   startLocalApi()
   registerIpcHandlers()
+  loadTeamFromOrg().catch(e => console.error('Org roster load failed:', e))
 
   mainWindow = createMainWindow()
   quickAddWindow = createQuickAddWindow()

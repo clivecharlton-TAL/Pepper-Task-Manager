@@ -25,6 +25,9 @@ import { startRecording, stopRecording, checkPermissions } from './recording'
 import { transcribeAudio } from './transcription'
 import { diarizeAudio, type DiarizationSegment } from './diarization'
 import { mergeTranscriptWithSpeakers } from './transcriptMerge'
+import { getOrgPeople, insertOrgPerson, patchOrgPerson, removeOrgPerson, addOrgChange, listOrgChanges } from './db'
+import { runOrgSync, appendChangeLog, checkSlides, ORG_SLIDES_URL } from './orgSync'
+import { canMove, describeChange, slugify, type OrgPatch, type OrgPerson } from '../shared/org'
 import type { CreateTaskInput, UpdateTaskInput, TaskFilters, CreateNoteInput, UpdateNoteInput, NoteFilters } from '../shared/types'
 
 export function registerIpcHandlers(): void {
@@ -48,6 +51,56 @@ export function registerIpcHandlers(): void {
     if (ok) broadcast({ type: 'task:deleted', id })
     return ok
   })
+
+  // ─── Org chart ────────────────────────────────────────────────────────────
+  // Every mutation: write DB → log the change (DB + context/org-changes.md) →
+  // push the new structure out to roster, team.md and Drive (runOrgSync).
+  async function recordOrgChange(before: OrgPerson | null, after: OrgPerson | null, people: OrgPerson[]) {
+    const summary = describeChange(before, after, people)
+    if (!summary) return
+    const at = new Date()
+    await addOrgChange(at.toISOString(), summary)
+    appendChangeLog(summary, at)
+  }
+
+  ipcMain.handle('org:list', () => getOrgPeople())
+  ipcMain.handle('org:changes', () => listOrgChanges())
+
+  ipcMain.handle('org:add', async (_e, input: Omit<OrgPerson, 'id' | 'sort_order' | 'perf_folder'>) => {
+    const people = await getOrgPeople()
+    let id = input.vacancy ? `vacancy-${input.manager_id}-${Date.now()}` : slugify(input.name)
+    if (people.some(p => p.id === id)) id = `${id}-${Date.now()}`
+    const person: OrgPerson = { ...input, id, perf_folder: null, sort_order: Math.max(0, ...people.map(p => p.sort_order)) + 1 }
+    await insertOrgPerson(person)
+    await recordOrgChange(null, person, [...people, person])
+    return { person, report: await runOrgSync() }
+  })
+
+  ipcMain.handle('org:update', async (_e, id: string, patch: OrgPatch) => {
+    const people = await getOrgPeople()
+    const before = people.find(p => p.id === id) ?? null
+    if (!before) return { error: 'Person not found' }
+    if (patch.manager_id !== undefined && patch.manager_id !== before.manager_id && (!patch.manager_id || !canMove(people, id, patch.manager_id))) {
+      return { error: 'That move would make someone report to their own team.' }
+    }
+    const after = await patchOrgPerson(id, patch)
+    await recordOrgChange(before, after, await getOrgPeople())
+    return { person: after, report: await runOrgSync() }
+  })
+
+  ipcMain.handle('org:remove', async (_e, id: string) => {
+    const people = await getOrgPeople()
+    const removed = await removeOrgPerson(id)
+    if (!removed) return { error: 'Person not found' }
+    await recordOrgChange(removed, null, people)
+    return { report: await runOrgSync() }
+  })
+
+  ipcMain.handle('org:resync', () => runOrgSync())
+  ipcMain.handle('org:check-slides', async () => {
+    try { return await checkSlides() } catch (e) { return { error: (e as Error).message.split('\n')[0] } }
+  })
+  ipcMain.handle('org:open-slides', () => shell.openExternal(ORG_SLIDES_URL))
 
   ipcMain.handle('labels:tree', () => getLabelTree())
 

@@ -6,11 +6,24 @@ import type { TaskStatus, TaskPriority, LabelNode } from '../../../../shared/typ
 import { matchesDue } from '../../../../shared/dateFilters'
 import { matchesAssignedToMe } from '../../utils/listHelpers'
 import { useOpsStore, attentionCount } from '../../stores/opsStore'
+import { useOrgStore } from '../../stores/orgStore'
+import { ROOT_ID } from '../../../../shared/org'
 
 function IconOps() {
   return (
     <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 7.5h3l1.5-3.5 2 7 1.5-3.5h3" />
+    </svg>
+  )
+}
+
+function IconOrg() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="1" width="4" height="3" rx="0.8" />
+      <rect x="1" y="10" width="4" height="3" rx="0.8" />
+      <rect x="9" y="10" width="4" height="3" rx="0.8" />
+      <path d="M7 4v3M3 10V7h8v3" />
     </svg>
   )
 }
@@ -259,6 +272,7 @@ export default function Sidebar({ width }: { width?: number }) {
 
   const opsSignals = useOpsStore(s => s.signals)
   const opsAttention = attentionCount(opsSignals)
+  const orgDirects = useOrgStore(s => s.people.filter(p => p.manager_id === ROOT_ID && !p.vacancy).length)
 
   const crossCuttingLabels = labels.filter(l => l.id.startsWith('+'))
   const [addingTag,  setAddingTag]  = useState(false)
@@ -457,6 +471,14 @@ export default function Sidebar({ width }: { width?: number }) {
           it stays peripheral; amber only when something needs attention. */}
       <div className="h-px bg-[#2e2e2e] mx-3 mb-2 flex-shrink-0" />
       <div className="px-2 pb-3 flex-shrink-0">
+        <FilterRow
+          colour="#6b7280"
+          label="Org"
+          count={orgDirects}
+          isActive={viewMode === 'org'}
+          onClick={() => setViewMode('org')}
+          icon={<IconOrg />}
+        />
         <FilterRow
           colour={opsAttention > 0 ? '#FF9F0A' : '#6b7280'}
           label="Ops"

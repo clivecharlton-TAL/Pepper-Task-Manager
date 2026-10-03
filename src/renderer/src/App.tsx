@@ -8,6 +8,7 @@ import { useAttachmentCountStore } from './stores/attachmentCountStore'
 import { useSubTaskCountStore } from './stores/subTaskCountStore'
 import { useRecordingStore } from './stores/recordingStore'
 import { useOpsStore } from './stores/opsStore'
+import { useOrgStore } from './stores/orgStore'
 
 export default function App() {
   const { isQuickAdd } = useLocation()
@@ -17,6 +18,10 @@ export default function App() {
   const { loadCounts: loadSubTaskCounts } = useSubTaskCountStore()
   const { init: initRecording } = useRecordingStore()
   const { loadSignals, init: initOps } = useOpsStore()
+  const initOrg = useOrgStore(s => s.init)
+
+  // The org chart owns the @mention roster — load it in every window.
+  useEffect(() => initOrg(), [])
 
   useEffect(() => {
     loadLabels()

@@ -25,7 +25,7 @@ interface TaskStore {
   /** Kanban columns collapsed to a narrow strip, for focusing on the rest. */
   collapsedColumns: TaskStatus[]
   searchQuery: string
-  viewMode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar' | 'timeline' | 'notes' | 'ops'
+  viewMode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar' | 'timeline' | 'notes' | 'ops' | 'org'
   lastTaskViewMode: 'kanban' | 'list' | 'timeline'
   listSort: ListSort
   listGroup: ListGroup
@@ -50,7 +50,7 @@ interface TaskStore {
   toggleColumnCollapsed: (status: TaskStatus) => void
   expandAllColumns: () => void
   setSearchQuery: (q: string) => void
-  setViewMode: (mode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar' | 'timeline' | 'notes' | 'ops') => void
+  setViewMode: (mode: 'kanban' | 'list' | 'reports' | 'files' | 'calendar' | 'timeline' | 'notes' | 'ops' | 'org') => void
   navigateToLabel: (labelId: string) => void
   setListSort: (sort: ListSort) => void
   setListGroup: (group: ListGroup) => void

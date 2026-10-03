@@ -4,6 +4,8 @@ import { readdir } from 'fs/promises'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import initSqlJs, { Database } from 'sql.js'
+import { ORG_SEED } from '../shared/orgSeed'
+import type { OrgPerson, OrgPatch, OrgChange, OrgTier } from '../shared/org'
 import type { Task, Label, LabelNode, CreateTaskInput, UpdateTaskInput, TaskFilters, ReportData, VelocityPoint, CompletionTimeItem, LabelBreakdownItem, TaskAttachment, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters, OpsSignal } from '../shared/types'
 
 const DB_PATH = join(app.getPath('userData'), 'tasks.db')
@@ -141,6 +143,7 @@ function migrate(db: Database): void {
 
   seedLabels(db)
   seedCrossCuttingLabels(db)
+  migrateOrg(db)
   save()
 }
 
@@ -900,4 +903,91 @@ export async function deleteNote(id: string): Promise<boolean> {
   run(d, 'DELETE FROM notes WHERE id = ?', [id])
   save()
   return true
+}
+
+// ─── Org chart ──────────────────────────────────────────────────────────────
+// org_people is the source of truth for the org structure. It is seeded once
+// from the bundled snapshot of context/team.md; after that the Org view edits
+// it and orgSync.ts pushes changes out to team.md, Drive and the change log.
+
+function migrateOrg(db: Database): void {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS org_people (
+      id          TEXT PRIMARY KEY,
+      name        TEXT NOT NULL,
+      role        TEXT NOT NULL DEFAULT '',
+      tier        TEXT NOT NULL DEFAULT 'Other',
+      team        TEXT NOT NULL DEFAULT '',
+      stripe      TEXT,
+      manager_id  TEXT,
+      vacancy     INTEGER NOT NULL DEFAULT 0,
+      contractor  TEXT,
+      email       TEXT,
+      perf_folder TEXT,
+      sort_order  INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS org_changes (
+      id      TEXT PRIMARY KEY,
+      at      TEXT NOT NULL,
+      summary TEXT NOT NULL
+    );
+  `)
+  const count = get<{ c: number }>(db, 'SELECT COUNT(*) as c FROM org_people')?.c ?? 0
+  if (count > 0) return
+  for (const p of ORG_SEED) {
+    run(db, `INSERT INTO org_people (id,name,role,tier,team,stripe,manager_id,vacancy,contractor,email,perf_folder,sort_order)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [p.key, p.name, p.role, p.tier, p.team, p.stripe, p.manager, p.vacancy ? 1 : 0, p.contractor, null, null, p.order])
+  }
+}
+
+function parseOrgPerson(row: Record<string, unknown>): OrgPerson {
+  return { ...(row as unknown as OrgPerson), vacancy: !!row.vacancy, tier: row.tier as OrgTier }
+}
+
+export async function getOrgPeople(): Promise<OrgPerson[]> {
+  const d = await getDb()
+  return all<Record<string, unknown>>(d, 'SELECT * FROM org_people ORDER BY sort_order').map(parseOrgPerson)
+}
+
+export async function insertOrgPerson(p: OrgPerson): Promise<void> {
+  const d = await getDb()
+  run(d, `INSERT INTO org_people (id,name,role,tier,team,stripe,manager_id,vacancy,contractor,email,perf_folder,sort_order)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [p.id, p.name, p.role, p.tier, p.team, p.stripe, p.manager_id, p.vacancy ? 1 : 0, p.contractor, p.email, p.perf_folder, p.sort_order])
+  save()
+}
+
+export async function patchOrgPerson(id: string, patch: OrgPatch): Promise<OrgPerson | null> {
+  const d = await getDb()
+  const row = get<Record<string, unknown>>(d, 'SELECT * FROM org_people WHERE id = ?', [id])
+  if (!row) return null
+  const u = { ...parseOrgPerson(row), ...patch }
+  run(d, `UPDATE org_people SET name=?,role=?,tier=?,team=?,stripe=?,manager_id=?,vacancy=?,contractor=?,email=?,perf_folder=?,sort_order=? WHERE id=?`,
+    [u.name, u.role, u.tier, u.team, u.stripe, u.manager_id, u.vacancy ? 1 : 0, u.contractor, u.email, u.perf_folder, u.sort_order, id])
+  save()
+  return u
+}
+
+/** Remove a person; their direct reports move up to the removed person's manager. */
+export async function removeOrgPerson(id: string): Promise<OrgPerson | null> {
+  const d = await getDb()
+  const row = get<Record<string, unknown>>(d, 'SELECT * FROM org_people WHERE id = ?', [id])
+  if (!row) return null
+  const p = parseOrgPerson(row)
+  run(d, 'UPDATE org_people SET manager_id = ? WHERE manager_id = ?', [p.manager_id, id])
+  run(d, 'DELETE FROM org_people WHERE id = ?', [id])
+  save()
+  return p
+}
+
+export async function addOrgChange(at: string, summary: string): Promise<void> {
+  const d = await getDb()
+  run(d, 'INSERT INTO org_changes (id, at, summary) VALUES (?,?,?)', [uuidv4(), at, summary])
+  save()
+}
+
+export async function listOrgChanges(limit = 100): Promise<OrgChange[]> {
+  const d = await getDb()
+  return all<OrgChange>(d, 'SELECT * FROM org_changes ORDER BY at DESC LIMIT ?', [limit])
 }

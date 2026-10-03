@@ -20,6 +20,7 @@ import CalendarView from './Calendar/CalendarView'
 import TimelineView from './Timeline/TimelineView'
 import NotesView from './Notes/NotesView'
 import { OpsView } from './Ops/OpsView'
+import OrgView from './Org/OrgView'
 import TopBar from './shared/TopBar'
 import MeetingBriefingPanel from './MeetingBriefingPanel'
 import AIChatPanel from './AIChatPanel'
@@ -187,6 +188,7 @@ export default function MainWindow() {
            viewMode === 'timeline' ? <TimelineView />  :
            viewMode === 'notes'    ? <NotesView />     :
            viewMode === 'ops'      ? <OpsView />       :
+           viewMode === 'org'      ? <OrgView />       :
                                      <CalendarView />}
         </div>
       </div>

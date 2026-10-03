@@ -92,3 +92,23 @@ input:focus, textarea:focus { outline: none; }
 .note-prose a { color: #4a9eca; }
 .note-prose ul[data-type="taskList"] { list-style: none; margin-left: 0; }
 .note-prose ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 6px; }
+
+/* ─── Org chart ─────────────────────────────────────────────────────────── */
+/* Elbow connectors for the nested reporting lines under each direct report. */
+.org-tree { list-style: none; position: relative; margin-left: 15px; }
+.org-tree > li { position: relative; padding-left: 18px; padding-top: 6px; }
+.org-tree > li::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  border-left: 1px solid var(--org-line, #3a3a3a);
+}
+.org-tree > li:last-child::before { bottom: auto; height: 29px; }
+.org-tree > li::after {
+  content: ''; position: absolute; left: 0; top: 29px; width: 14px;
+  border-top: 1px solid var(--org-line, #3a3a3a); border-bottom-left-radius: 6px;
+}
+.org-canvas {
+  background-image: radial-gradient(circle at 1px 1px, #262626 1px, transparent 0);
+  background-size: 22px 22px;
+}
+@keyframes org-pop { from { opacity: 0; transform: translateY(4px) scale(.98) } to { opacity: 1; transform: none } }
+.org-pop { animation: org-pop .22s ease-out both; }

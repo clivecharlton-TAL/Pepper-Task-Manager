@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { OrgPerson, OrgPatch, OrgChange, SlidesCheck, OrgSyncReport } from '../shared/org'
 import type { CreateTaskInput, UpdateTaskInput, TaskFilters, Task, LabelNode, ReportData, FileEntry, TaskAttachmentWithStatus, SubTask, TaskLink, Note, CreateNoteInput, UpdateNoteInput, NoteFilters, RecordingPermissionStatus, SemanticHit, OpsSignal } from '../shared/types'
 
 const api = {
@@ -115,6 +116,18 @@ const api = {
     hasCredentials:  (): Promise<boolean> => ipcRenderer.invoke('ops:has-credentials'),
     saveCredentials: (input: { jiraEmail: string; jiraApiToken: string; jiraSiteUrl: string; opsJql?: string }): Promise<void> =>
       ipcRenderer.invoke('ops:save-credentials', input),
+  },
+  org: {
+    list:        (): Promise<OrgPerson[]> => ipcRenderer.invoke('org:list'),
+    changes:     (): Promise<OrgChange[]> => ipcRenderer.invoke('org:changes'),
+    add:         (input: Omit<OrgPerson, 'id' | 'sort_order' | 'perf_folder'>): Promise<{ person?: OrgPerson; report?: OrgSyncReport; error?: string }> =>
+      ipcRenderer.invoke('org:add', input),
+    update:      (id: string, patch: OrgPatch): Promise<{ person?: OrgPerson | null; report?: OrgSyncReport; error?: string }> =>
+      ipcRenderer.invoke('org:update', id, patch),
+    remove:      (id: string): Promise<{ report?: OrgSyncReport; error?: string }> => ipcRenderer.invoke('org:remove', id),
+    resync:      (): Promise<OrgSyncReport> => ipcRenderer.invoke('org:resync'),
+    checkSlides: (): Promise<SlidesCheck | { error: string }> => ipcRenderer.invoke('org:check-slides'),
+    openSlides:  (): Promise<void> => ipcRenderer.invoke('org:open-slides'),
   },
   window: {
     hideQuickAdd: () => ipcRenderer.send('quick-add:hide'),

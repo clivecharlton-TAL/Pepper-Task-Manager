@@ -16,9 +16,10 @@ const DIRECT_ACCOUNT_IDS: Record<string, string> = {
   '620cea29156f53006b25703f': 'Renier Hugo',
 }
 
-const DIRECT_EMAILS = new Set(
-  TEAM_MEMBERS.filter(m => m.name !== 'Clive Charlton').map(m => m.email.toLowerCase())
-)
+// Read the roster on each call: it is live and follows the org chart.
+function directEmails(): Set<string> {
+  return new Set(TEAM_MEMBERS.filter(m => m.isDirect).map(m => m.email.toLowerCase()))
+}
 
 /**
  * True when a signal is assigned to one of Clive's directs.
@@ -29,7 +30,7 @@ const DIRECT_EMAILS = new Set(
 export function isDirectReport(signal: OpsSignal): boolean {
   if (signal.assignee_account_id && DIRECT_ACCOUNT_IDS[signal.assignee_account_id]) return true
   if (!signal.assignee_name) return false
-  return DIRECT_EMAILS.has(
+  return directEmails().has(
     signal.assignee_name.toLowerCase().replace(/\s+/g, '.') + '@takealot.com'
   )
 }
